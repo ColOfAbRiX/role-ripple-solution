@@ -1,0 +1,11 @@
+---
+# tasks file for ripple-solution
+
+- name: "Install Ripple Solution"
+  include: install.yml
+  tags: [ripple-solution]
+
+- name: "Configure PostgreSQL"
+  delegate_to: localhost
+  include: postgres.yml
+  tags: [ripple-solution, postgres]

@@ -1,0 +1,33 @@
+---
+
+- name: "Install Client Certificate for Repository"
+  copy:
+    src:    "{{ ssl_certificates_base }}/{{ item }}"
+    dest:   "/var/lib/yum/{{ item }}"
+    mode:   '0400'
+    force:  yes
+    owner:  root
+    group:  root
+    seuser: system_u
+    serole: object_r
+    setype: rpm_var_lib_t
+  with_items:
+   - ripple-private.client.crt
+   - ripple-private.client.key
+
+- name: "Setup Repository"
+  yum_repository:
+    name:          ripple-private
+    description:   "Ripple Private Repo for Enterprise Linux $releasever - $basearchhttps://clients.ripple.com/repo/rpm/$releasever/$basearch"
+    baseurl:       https://clients.ripple.com/repo/rpm/$releasever/$basearch
+    enabled:       yes
+    gpgcheck:      no
+    sslclientcert: /var/lib/yum/ripple-private.client.crt
+    sslclientkey:  /var/lib/yum/ripple-private.client.key
+    sslverify:     yes
+
+- name: "Install Packages"
+  yum:
+    update_cache: yes
+    name: ripple-solution
+    state: present

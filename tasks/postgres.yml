@@ -1,0 +1,73 @@
+---
+
+- set_fact:
+    db_info_partial:
+     - enabled:       "{{ ripple_connect_enabled }}"
+       db_host:       "{{ ripple_connect_db_host }}"
+       db_port:       "{{ ripple_connect_db_port }}"
+       db_user:       "{{ ripple_connect_db_user }}"
+       db_pass:       "{{ ripple_connect_db_pass }}"
+       db_name:       "{{ ripple_connect_db_name }}"
+       db_admin_name: "{{ ripple_connect_db_admin_name }}"
+       db_admin_pass: "{{ ripple_connect_db_admin_pass }}"
+     - enabled:       "{{ ilp_validator_enabled }}"
+       db_host:       "{{ ilp_validator_db_host }}"
+       db_port:       "{{ ilp_validator_db_port }}"
+       db_user:       "{{ ilp_validator_db_user }}"
+       db_pass:       "{{ ilp_validator_db_pass }}"
+       db_name:       "{{ ilp_validator_db_name }}"
+       db_admin_name: "{{ ilp_validator_db_admin_name }}"
+       db_admin_pass: "{{ ilp_validator_db_admin_pass }}"
+     - enabled:       "{{ fx_connector_enabled }}"
+       db_host:       "{{ fx_connector_db_host }}"
+       db_port:       "{{ fx_connector_db_port }}"
+       db_user:       "{{ fx_connector_db_user }}"
+       db_pass:       "{{ fx_connector_db_pass }}"
+       db_name:       "{{ fx_connector_db_name }}"
+       db_admin_name: "{{ fx_connector_db_admin_name }}"
+       db_admin_pass: "{{ fx_connector_db_admin_pass }}"
+
+- set_fact:
+    db_info: "{{ (db_info_partial + ilp_ledgers) | list }}"
+
+- name: "Create Databases"
+  postgresql_db:
+    login_host:     "{{ item.db_host }}"
+    login_user:     "{{ item.db_admin_name }}"
+    login_password: "{{ item.db_admin_pass }}"
+    port:           "{{ item.db_port }}"
+    name:           "{{ item.db_name }}"
+  when: item.enabled | default(False) | bool
+  with_items:
+   - "{{ db_info }}"
+
+- name: "Create Users"
+  postgresql_user:
+    login_host:      "{{ item.db_host }}"
+    login_user:      "{{ item.db_admin_name }}"
+    login_password:  "{{ item.db_admin_pass }}"
+    port:            "{{ item.db_port }}"
+    name:            "{{ item.db_user }}"
+    password:        "{{ item.db_pass }}"
+    db:              "{{ item.db_name }}"
+    priv:            ALL
+    role_attr_flags: NOSUPERUSER,NOCREATEDB
+    no_password_changes: yes
+  when: item.enabled | default(False) | bool
+  with_items:
+   - "{{ db_info }}"
+
+- name: "Lock DB for Other Users"
+  postgresql_privs:
+    login_host:      "{{ item.db_host }}"
+    login_user:      "{{ item.db_admin_name }}"
+    login_password:  "{{ item.db_admin_pass }}"
+    port:            "{{ item.db_port }}"
+    db:              "{{ item.db_name }}"
+    role:            PUBLIC
+    type:            database
+    priv:            ALL
+    state:           absent
+  when: item.enabled | default(False) | bool
+  with_items:
+   - "{{ db_info }}"
