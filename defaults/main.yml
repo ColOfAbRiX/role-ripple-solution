@@ -1,6 +1,14 @@
 ---
 # defaults file for ripple-solution
 
+# Ripple Paths
+ripple_solution_config_base: /opt/ripple-solution/config
+ripple_solution_cert_base:   /opt/ripple-solution/config/certs
+
+# User running Ripple
+ripple_solution_user:        ripple_solution
+ripple_solution_group:       ripple_solution
+
 #
 # Ripple Connect
 #
@@ -13,6 +21,7 @@ ripple_connect_db_pass: Passw0rd
 ripple_connect_db_name: "ripple_connect"
 ripple_connect_db_admin_name: postgres
 ripple_connect_db_admin_pass: Passw0rd
+ripple_connect_config: {}
 
 #
 # FX Connector
@@ -26,6 +35,7 @@ fx_connector_db_pass: Passw0rd
 fx_connector_db_name: "fx_connector"
 fx_connector_db_admin_name: postgres
 fx_connector_db_admin_pass: Passw0rd
+fx_connector_config: {}
 
 #
 # ILP Validator
@@ -39,6 +49,7 @@ ilp_validator_db_pass: Passw0rd
 ilp_validator_db_name: "ilp_validator"
 ilp_validator_db_admin_name: postgres
 ilp_validator_db_admin_pass: Passw0rd
+ilp_validator_config: {}
 
 #
 # ILP Ledgers
@@ -53,3 +64,4 @@ ilp_ledgers: []
 #   db_name: ledger_eur
 #   db_admin_name: postgres
 #   db_admin_pass: Passw0rd
+#   config: {}

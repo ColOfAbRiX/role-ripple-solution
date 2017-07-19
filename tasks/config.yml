@@ -1,0 +1,158 @@
+---
+
+- name: "Create Required Directories"
+  file:
+    path:  "{{ ripple_solution_cert_base }}"
+    state: directory
+    mode:   '0755'
+    force:  yes
+    owner:  "{{ ripple_solution_user }}"
+    group:  "{{ ripple_solution_group }}"
+    seuser: system_u
+    serole: object_r
+    setype: usr_t
+
+#
+# Keys
+#
+
+- name: "Secret Keys"
+  shell: "node /opt/ripple-solution/scripts/secret_key_generator.js > {{ ripple_solution_cert_base }}/{{ ansible_hostname }}-{{ item }}.pia"
+  args:
+    creates: "{{ ripple_solution_cert_base }}/{{ ansible_hostname }}-{{ item }}.pia"
+  with_items:
+   - mac_key
+   - external_access_token_key
+   - client_access_token_key
+   - ilp_key
+
+- name: "Read Secret Keys"
+  shell: "cat {{ ripple_solution_cert_base }}/{{ ansible_hostname }}-{{ item }}.pia"
+  register: ripple_connect_secrets
+  with_items:
+   - mac_key
+   - external_access_token_key
+   - client_access_token_key
+   - ilp_key
+
+- name: "Connector Secrets"
+  shell: "node /opt/ripple-solution/scripts/secret_key_generator.js > {{ ripple_solution_cert_base }}/{{ ansible_hostname }}-{{ item }}.pia"
+  args:
+    creates: "{{ ripple_solution_cert_base }}/{{ ansible_hostname }}-{{ item }}.pia"
+  with_items:
+   - CONNECTOR_QUOTE_HMAC_KEY
+  when: fx_connector_enabled | bool
+
+- name: "Read Connector Secrets"
+  shell: "cat {{ ripple_solution_cert_base }}/{{ ansible_hostname }}-{{ item }}.pia"
+  register: connector_secrets
+  with_items:
+   - CONNECTOR_QUOTE_HMAC_KEY
+  when: fx_connector_enabled | bool
+
+- name: "Validator Secrets"
+  shell: "node /opt/ripple-solution/scripts/ed25519_key_pair_generator.js > {{ ripple_solution_cert_base }}/{{ ansible_hostname }}_validator_key_pair.pia"
+  args:
+    creates: "{{ ripple_solution_cert_base }}/{{ ansible_hostname }}_validator_key_pair.pia"
+  when: ilp_validator_enabled | bool
+
+- name: "Read ED25519 Key Pair"
+  shell: "cat {{ ripple_solution_cert_base }}/{{ ansible_hostname }}_validator_key_pair.pia"
+  register: validator_key
+  when: ilp_validator_enabled | bool
+
+#
+# Password hashes
+#
+
+- name: "Hash Partner Passwords"
+  shell: "node /opt/ripple-solution/scripts/hash_password.js <<<{{ item.username }}:RippleSolution:{{ item.password }}"
+  register: hashed_partner_passwords
+  with_items:
+   - "{{ ripple_solution_partners }}"
+
+- debug: var=hashed_partner_passwords
+
+- name: "Hash Operator Passwords"
+  shell: "node /opt/ripple-solution/scripts/hash_password.js <<<{{ item.username }}:RippleSolution:{{ item.password }}"
+  register: hashed_operator_passwords
+  with_items:
+   - "{{ ripple_solution_operators }}"
+
+- name: "Hash Custom Rate Operator Passwords"
+  shell: "node /opt/ripple-solution/scripts/hash_password.js <<<{{ item.username }}:RippleSolution:{{ item.password }}"
+  register: hashed_custom_rate_operators_passwords
+  with_items:
+   - "{{ ripple_solution_custom_rate_operator }}"
+
+- name: "Hash Monitor Passwords"
+  shell: "node /opt/ripple-solution/scripts/hash_password.js <<<{{ item.username }}:RippleSolution:{{ item.password }}"
+  register: hashed_monitor_passwords
+  with_items:
+   - "{{ ripple_solution_monitors }}"
+
+#
+# Configuration files
+#
+
+- name: "Construct Files Content"
+  set_fact:
+    database_file:
+      dialect:  postgres
+      host:     "{{ ripple_connect_db_host }}"
+      port:     "{{ ripple_connect_db_port | string }}"
+      database: "{{ ripple_connect_db_name }}"
+
+    server_file:
+      secure: "{{ ripple_connect_server.secure }}"
+      port:   "{{ ripple_connect_server.port | string }}"
+      host:   "{{ ripple_connect_server.host }}"
+      server_key_path:         "{{ ripple_solution_cert_base }}/ripple-connect-key.pem"
+      server_certificate_path: "{{ ripple_solution_cert_base }}/ripple-connect-crt.pem"
+      server_ca_paths:
+        - "{{ ripple_solution_cert_base }}/provider-ca-crt.pem"
+        - "{{ ripple_solution_cert_base }}/consumer-ca-crt.pem"
+
+    config_file: "{{ ripple_connect_config }}"
+
+    secrets_file:
+      # external_credentials:
+      #   liquidity-consumer-bank.ripple.com:
+      #     id: liquidity-provider1
+      #     encrypted_password: q3nCBqDdizwVq22zMNnqbMRwXfJfgwV1hKmS36rev80cWJgqDBozFwCneZdbUu4tu61oimSU6Juj7Hs5ppAJ5GkwspKB1a7FLJy1dJtyipKoW7HLviqAm0zicEwb9az6GdCwEuiB0JQ6votLOO72DKYmuFHxhC4N+Jwz+Z2AqsQydFBTx2m6bdl3/sT5wTliIFbonIKeW44xIKTePIY/uHjdKadVxjBTjnxeThZVoOPkO6NW6mthqZsMGVzEjtsB0z5H4QHJPuvhmd1yuIAsgUfWOCipmKHX5oza49ON4Lce0w1hbVvLP6oNuQoMCAB4dPFtfXj32OCCq1q2WwkDBA==
+      # external_credentials_password_key: "{{ ripple_solution_cert_base }}/provider-admin-key.pem"
+      # database_username: rc_user
+      # encrypted_database_password: Vj29QQpuIEy3KgV2gwQHtn8Igzqa/H96BFoqcw+zkHgBbVBSlI0ibat4iRqk1hpbKlEJ5UKv/WnZz9Vt1H9t04dwCQ8qHMDVzPyZsQ8ti5qvDErG1i5oT5xN1OHKP+mzA/bUmr3aGaE9EDlO7Y4+k4u1AyzMqRSRIGdNszDppuSB2Y4xlrGDCXJXXw7kJo2ZwSGFC7RUUQQw3oqFaFa3Amp8F2GKwKtlTcF8MMz3PFSOswTHtG1iG5kUjDDmxNZs7FFezTFFwhCUrsxNBODE2mDwiMDCNsRpkw0hWlKxxWOTckB5HSEyhyHN6VH4y6y72B7uhyKZzAYj8XhT7psHJg==
+      # encrypted_database_password_key: "{{ ripple_solution_cert_base }}/provider-admin-key.pem"
+      # ilp_credentials:
+      #   https://liquidity-provider-bank.ripple.com:3000/account/transactional:
+      #     cert_path: "{{ ripple_solution_cert_base }}/ripple-connect-crt.pem"
+      #     key_path: "{{ ripple_solution_cert_base }}/ripple-connect-key.pem"
+      #     ca_path: "{{ ripple_solution_cert_base }}/provider-ca-crt.pem"
+      # ilp_key: 6e8af5fbbedb40c2f9d7467ae907544b5bc3f068bc8166b9fa998aabce1b9448
+      # mac_key: 5e8af5fbbedb40c2f9d7467ae907544b5bc3f068bc8166b9fa998aabce1b9448
+      # external_access_token_key: 4e8af5fbbedb40c2f9d7467ae907544b5bc3f068bc8166b9fa998aabce1b9448
+      # client_access_token_key: 3e8af5fbbedb40c2f9d7467ae907544b5bc3f068bc8166b9fa998aabce1b9448
+      # usage_reports_key_path: ''
+      # usage_reports_cert_path: ''
+
+    config_ilp_file: {}
+
+
+- name: "Install Configuration Files"
+  template:
+    src:    "{{ item }}.j2"
+    dest:   "{{ ripple_solution_config_base }}/{{ item }}"
+    mode:   '0644'
+    force:  yes
+    owner:  "{{ ripple_solution_user }}"
+    group:  "{{ ripple_solution_group }}"
+    seuser: system_u
+    serole: object_r
+    setype: usr_t
+  with_items:
+   - config-ilp.json
+   - config.json
+   - database.json
+   - secrets.json
+   - server.json

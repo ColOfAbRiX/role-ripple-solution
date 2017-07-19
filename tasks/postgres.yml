@@ -37,6 +37,8 @@
     login_password: "{{ item.db_admin_pass }}"
     port:           "{{ item.db_port }}"
     name:           "{{ item.db_name }}"
+    encoding:       UTF-8
+    template:       template0
   when: item.enabled | default(False) | bool
   with_items:
    - "{{ db_info }}"
