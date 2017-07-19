@@ -1,25 +1,123 @@
 ---
 
+- set_fact:
+    cert_path: "{{ ripple_solution_cert_base }}"
+    key_path:  "{{ ripple_solution_cert_base }}/private"
+    csr_path:  "{{ ripple_solution_cert_base }}/tmp"
+
+- set_fact:
+    ca_cert: "{{ cert_path }}/{{ ripple_solution_ca_crt }}"
+    ca_key:  "{{ key_path }}/{{ ripple_solution_ca_key }}"
+    admin_cert: "{{ cert_path }}/{{ ripple_solution_admin_crt }}"
+    admin_key:  "{{ key_path }}/{{ ripple_solution_admin_key }}"
+
 - name: "Create Required Directories"
   file:
-    path:  "{{ ripple_solution_cert_base }}"
+    path:  "{{ item.path }}"
     state: directory
-    mode:   '0755'
+    mode:   "{{ item.mode }}"
     force:  yes
     owner:  "{{ ripple_solution_user }}"
     group:  "{{ ripple_solution_group }}"
     seuser: system_u
     serole: object_r
     setype: usr_t
+  with_items:
+   - { path: "{{ cert_path }}", mode: '0755' }
+   - { path: "{{ key_path }}",  mode: '0750' }
+   - { path: "{{ csr_path }}",  mode: '0750' }
 
 #
-# Keys
+# Root CA Certificate
+#
+
+- name: "OpenSSL Configuration"
+  template:
+    src:   "ca.cnf.j2"
+    dest:   "{{ ripple_solution_config_base }}/ca.cnf"
+    owner:  "{{ ripple_solution_user }}"
+    group:  "{{ ripple_solution_group }}"
+    seuser: system_u
+    serole: object_r
+    setype: usr_t
+
+- name: "Check CA Certificate"
+  stat: path="{{ ca_cert }}"
+  register: ca_stat
+
+- name: "Ensure we can overwrite existing key"
+  file: path="{{ item }}" mode="u+w"
+  with_items:
+   - "{{ ca_cert }}"
+   - "{{ ca_key }}"
+  ignore_errors: true
+
+- name: "Create Certification Authority Certificate"
+  shell: umask 337; openssl req -nodes -new -x509 -days 9999 -sha256 -config "{{ ripple_solution_config_base }}/ca.cnf" -keyout "{{ ca_key }}" -out "{{ ca_cert }}"
+  when: not ca_stat.stat.exists
+
+- name: "Set permissions on CA"
+  file: path="{{ ca_cert }}" mode="go+r"
+
+#
+# Other SSL Certificates
+#
+
+- set_fact:
+    cert_items:
+     - admin
+     - fx-connector
+     - ledger
+     - ripple-connect
+     - validator
+    admin_crt_idx:          0
+    fx_connector_crt_idx:   1
+    ledger_crt_idx:         2
+    ripple_connect_crt_idx: 3
+    validator_crt_idx:      4
+
+- name: "Read Key Info"
+  stat: path="{{ key_path }}/{{ ansible_hostname }}-{{ item }}-key.pem"
+  with_items:
+   - "{{ cert_items }}"
+  register: key_stat
+
+- name: "Create Private Key"
+  shell: openssl genrsa -out "{{ key_path }}/{{ ansible_hostname }}-{{ item.item }}-key.pem" 4096
+  with_items:
+   - "{{ key_stat.results }}"
+  when: not item.stat.exists
+
+- name: "Create CSR"
+  shell: openssl req -sha256 -new -key "{{ key_path }}/{{ ansible_hostname }}-{{ item.item }}-key.pem" -out "{{ csr_path }}/{{ ansible_hostname }}-{{ item.item }}-csr.pem" -subj "/CN={{ ansible_host }}"
+  with_items:
+   - "{{ key_stat.results }}"
+  when: not item.stat.exists
+
+- name: "Sign CSR and Create Certificate"
+  command: openssl x509 -req -sha256 -days 9999 -in "{{ csr_path }}/{{ ansible_hostname }}-{{ item.item }}-csr.pem" -CA "{{ ca_cert }}" -CAkey "{{ ca_key }}" -CAcreateserial -out "{{ cert_path }}/{{ ansible_hostname }}-{{ item.item }}-crt.pem"
+  with_items:
+   - "{{ key_stat.results }}"
+  when: not item.stat.exists
+
+#
+# Fingerprints
+#
+
+- name: "SHA-256 Fingerprints"
+  shell: openssl x509 -in "{{ cert_path }}/{{ ansible_hostname }}-{{ item }}-crt.pem" -noout -fingerprint -sha256
+  with_items:
+   - "{{ cert_items }}"
+  register: fingerprints
+
+#
+# Key Pairs Creation
 #
 
 - name: "Secret Keys"
-  shell: "node /opt/ripple-solution/scripts/secret_key_generator.js > {{ ripple_solution_cert_base }}/{{ ansible_hostname }}-{{ item }}.pia"
+  shell: "node /opt/ripple-solution/scripts/secret_key_generator.js > {{ key_path }}/{{ ansible_hostname }}-{{ item }}.pia"
   args:
-    creates: "{{ ripple_solution_cert_base }}/{{ ansible_hostname }}-{{ item }}.pia"
+    creates: "{{ key_path }}/{{ ansible_hostname }}-{{ item }}.pia"
   with_items:
    - mac_key
    - external_access_token_key
@@ -27,7 +125,7 @@
    - ilp_key
 
 - name: "Read Secret Keys"
-  shell: "cat {{ ripple_solution_cert_base }}/{{ ansible_hostname }}-{{ item }}.pia"
+  shell: "cat {{ key_path }}/{{ ansible_hostname }}-{{ item }}.pia"
   register: ripple_connect_secrets
   with_items:
    - mac_key
@@ -36,33 +134,47 @@
    - ilp_key
 
 - name: "Connector Secrets"
-  shell: "node /opt/ripple-solution/scripts/secret_key_generator.js > {{ ripple_solution_cert_base }}/{{ ansible_hostname }}-{{ item }}.pia"
+  shell: "node /opt/ripple-solution/scripts/secret_key_generator.js > {{ key_path }}/{{ ansible_hostname }}-{{ item }}.pia"
   args:
-    creates: "{{ ripple_solution_cert_base }}/{{ ansible_hostname }}-{{ item }}.pia"
+    creates: "{{ key_path }}/{{ ansible_hostname }}-{{ item }}.pia"
   with_items:
    - CONNECTOR_QUOTE_HMAC_KEY
   when: fx_connector_enabled | bool
 
 - name: "Read Connector Secrets"
-  shell: "cat {{ ripple_solution_cert_base }}/{{ ansible_hostname }}-{{ item }}.pia"
+  shell: "cat {{ key_path }}/{{ ansible_hostname }}-{{ item }}.pia"
   register: connector_secrets
   with_items:
    - CONNECTOR_QUOTE_HMAC_KEY
   when: fx_connector_enabled | bool
 
 - name: "Validator Secrets"
-  shell: "node /opt/ripple-solution/scripts/ed25519_key_pair_generator.js > {{ ripple_solution_cert_base }}/{{ ansible_hostname }}_validator_key_pair.pia"
+  shell: "node /opt/ripple-solution/scripts/ed25519_key_pair_generator.js > {{ key_path }}/{{ ansible_hostname }}_validator_key_pair.pia"
   args:
-    creates: "{{ ripple_solution_cert_base }}/{{ ansible_hostname }}_validator_key_pair.pia"
+    creates: "{{ key_path }}/{{ ansible_hostname }}_validator_key_pair.pia"
   when: ilp_validator_enabled | bool
 
-- name: "Read ED25519 Key Pair"
-  shell: "cat {{ ripple_solution_cert_base }}/{{ ansible_hostname }}_validator_key_pair.pia"
+- name: "Read Secrets"
+  shell: "cat {{ key_path }}/{{ ansible_hostname }}_validator_key_pair.pia"
   register: validator_key
   when: ilp_validator_enabled | bool
 
 #
-# Password hashes
+# Passwords encryption
+#
+
+- name: "Encrypt Known Remotes Passwords"
+  shell: "node /opt/ripple-solution/scripts/encrypt_string.js {{ admin_key }} <<<{{ item.password }}"
+  register: encrypted_known_remote_passwords
+  with_items:
+   - "{{ ripple_solution_known_remotes }}"
+
+- name: "Encrypt Database Passwords"
+  shell: "node /opt/ripple-solution/scripts/encrypt_string.js {{ admin_key }} <<<{{ ripple_connect_db_pass }}"
+  register: encrypted_database_password
+
+#
+# Passwords hashing
 #
 
 - name: "Hash Partner Passwords"
@@ -70,8 +182,6 @@
   register: hashed_partner_passwords
   with_items:
    - "{{ ripple_solution_partners }}"
-
-- debug: var=hashed_partner_passwords
 
 - name: "Hash Operator Passwords"
   shell: "node /opt/ripple-solution/scripts/hash_password.js <<<{{ item.username }}:RippleSolution:{{ item.password }}"
@@ -104,9 +214,9 @@
       database: "{{ ripple_connect_db_name }}"
 
     server_file:
-      secure: "{{ ripple_connect_server.secure }}"
-      port:   "{{ ripple_connect_server.port | string }}"
-      host:   "{{ ripple_connect_server.host }}"
+      secure: "{{ ripple_connect_secure }}"
+      port:   "{{ ripple_connect_port | string }}"
+      host:   "{{ ripple_connect_host }}"
       server_key_path:         "{{ ripple_solution_cert_base }}/ripple-connect-key.pem"
       server_certificate_path: "{{ ripple_solution_cert_base }}/ripple-connect-crt.pem"
       server_ca_paths:
@@ -115,29 +225,9 @@
 
     config_file: "{{ ripple_connect_config }}"
 
-    secrets_file:
-      # external_credentials:
-      #   liquidity-consumer-bank.ripple.com:
-      #     id: liquidity-provider1
-      #     encrypted_password: q3nCBqDdizwVq22zMNnqbMRwXfJfgwV1hKmS36rev80cWJgqDBozFwCneZdbUu4tu61oimSU6Juj7Hs5ppAJ5GkwspKB1a7FLJy1dJtyipKoW7HLviqAm0zicEwb9az6GdCwEuiB0JQ6votLOO72DKYmuFHxhC4N+Jwz+Z2AqsQydFBTx2m6bdl3/sT5wTliIFbonIKeW44xIKTePIY/uHjdKadVxjBTjnxeThZVoOPkO6NW6mthqZsMGVzEjtsB0z5H4QHJPuvhmd1yuIAsgUfWOCipmKHX5oza49ON4Lce0w1hbVvLP6oNuQoMCAB4dPFtfXj32OCCq1q2WwkDBA==
-      # external_credentials_password_key: "{{ ripple_solution_cert_base }}/provider-admin-key.pem"
-      # database_username: rc_user
-      # encrypted_database_password: Vj29QQpuIEy3KgV2gwQHtn8Igzqa/H96BFoqcw+zkHgBbVBSlI0ibat4iRqk1hpbKlEJ5UKv/WnZz9Vt1H9t04dwCQ8qHMDVzPyZsQ8ti5qvDErG1i5oT5xN1OHKP+mzA/bUmr3aGaE9EDlO7Y4+k4u1AyzMqRSRIGdNszDppuSB2Y4xlrGDCXJXXw7kJo2ZwSGFC7RUUQQw3oqFaFa3Amp8F2GKwKtlTcF8MMz3PFSOswTHtG1iG5kUjDDmxNZs7FFezTFFwhCUrsxNBODE2mDwiMDCNsRpkw0hWlKxxWOTckB5HSEyhyHN6VH4y6y72B7uhyKZzAYj8XhT7psHJg==
-      # encrypted_database_password_key: "{{ ripple_solution_cert_base }}/provider-admin-key.pem"
-      # ilp_credentials:
-      #   https://liquidity-provider-bank.ripple.com:3000/account/transactional:
-      #     cert_path: "{{ ripple_solution_cert_base }}/ripple-connect-crt.pem"
-      #     key_path: "{{ ripple_solution_cert_base }}/ripple-connect-key.pem"
-      #     ca_path: "{{ ripple_solution_cert_base }}/provider-ca-crt.pem"
-      # ilp_key: 6e8af5fbbedb40c2f9d7467ae907544b5bc3f068bc8166b9fa998aabce1b9448
-      # mac_key: 5e8af5fbbedb40c2f9d7467ae907544b5bc3f068bc8166b9fa998aabce1b9448
-      # external_access_token_key: 4e8af5fbbedb40c2f9d7467ae907544b5bc3f068bc8166b9fa998aabce1b9448
-      # client_access_token_key: 3e8af5fbbedb40c2f9d7467ae907544b5bc3f068bc8166b9fa998aabce1b9448
-      # usage_reports_key_path: ''
-      # usage_reports_cert_path: ''
-
-    config_ilp_file: {}
-
+- name: "Clean Examples"
+  shell: "rm -f {{ ripple_solution_config_base }}/*example*"
+  changed_when: false
 
 - name: "Install Configuration Files"
   template:

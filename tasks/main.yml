@@ -19,5 +19,6 @@
   tags: [ripple-solution, ripple-certificates]
 
 - name: "Configure Ripple"
+  become_user: ripple_solution
   include: config.yml
   tags: [ripple-solution, ripple-configuration]

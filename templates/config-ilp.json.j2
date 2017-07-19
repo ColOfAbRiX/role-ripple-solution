@@ -1,1 +1,48 @@
-{{ config_ilp_file | to_nice_json }}
+{
+  "ripple-connect":{
+{% if ripple_connect_enabled | bool %}
+    "RC_CONFIGS_PATH": "{{ ripple_solution_config_base }}",
+    "RC_SECRETS_ENCRYPTED": {{ ripple_connect_secrets_encrypted}},
+    "RC_ENABLE_UI": {{ ripple_connect_enable_ui }}
+{% endif %}
+  },
+
+  "connector": {
+{% if fx_connector_enabled | bool %}
+    "CONNECTOR_TLS_CAS": {{ fx_connector_trusted_crts | to_nice_json }}
+{% endif %}
+  },
+
+  "validator": {
+{% if ilp_validator_enabled | bool %}
+    "VALIDATOR_HOSTNAME": "{{ ilp_validator_host }}",
+    "VALIDATOR_PORT": {{ ilp_validator_port }},
+    "VALIDATOR_DB_URI": "postgres://{{ ilp_validator_db_user }}:{{ ilp_validator_db_pass }}@{{ ilp_validator_db_host }}:{{ ilp_validator_db_port }}/{{ ilp_validator_db_name }}",
+{% for key, value in ilp_validator_config.iteritems() %}
+    "VALIDATOR_{{ key | upper }}": "{{ value }}",
+{% endfor %}
+    "VALIDATOR_ED25519_PUBLIC_KEY": "{{ validator_key.stdout_lines[0].split(' ')[2] }}",
+    "VALIDATOR_ED25519_SECRET_KEY": "{{ validator_key.stdout_lines[1].split(' ')[2] }}",
+    "VALIDATOR_TLS_KEY": "{{ key_path }}/{{ ansible_hostname }}-validator-key.pem",
+    "VALIDATOR_TLS_CERTIFICATE": "{{ cert_path }}/{{ ansible_hostname }}-validator-crt.pem",
+    "VALIDATOR_TLS_CAS": {{ ilp_validator_trusted_crts | to_nice_json }}
+{% endif %}
+  },
+
+{% for ledger in ilp_ledgers %}
+  "ledger{{ loop.index0 }}": {
+    "LEDGER_HOSTNAME": "{{ ledger.host }}",
+    "LEDGER_PORT": {{ ledger.port }},
+    "LEDGER_DB_URI": "postgres://{{ ledger.db_user }}:{{ ledger.db_pass }}@{{ ledger.db_host }}:{{ ledger.db_port }}/{{ ledger.db_name }}",
+    "LEDGER_ADMIN_FINGERPRINT": "{{ fingerprints.results[ledger_crt_idx].stdout.split('=')[1] }}",
+    "LEDGER_TLS_KEY": "{{ key_path }}/{{ ansible_hostname }}-ledger-key.pem",
+    "LEDGER_TLS_CERTIFICATE": "{{ cert_path }}/{{ ansible_hostname }}-ledger-crt.pem",
+    "LEDGER_AMOUNT_SCALE": {{ ripple_connect_config.amount_decimal_scale }},
+{% for key, value in ledger.config.iteritems() %}
+    "LEDGER_{{ key | upper }}": "{{ value }}",
+{% endfor %}
+    "LEDGER_TLS_CAS": {{ ledger.trusted_crts | to_nice_json }}
+  }{% if not loop.last %},{% endif %}
+
+{% endfor %}
+}
