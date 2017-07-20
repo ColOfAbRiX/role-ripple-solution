@@ -5,7 +5,7 @@ prompt             = no
 x509_extensions    = v3_ca
 
 [ req_distinguished_name ]
-CN = {{ ansible_host }}-ca
+CN = {{ ansible_fqdn }}-ca
 
 [ v3_ca ]
 basicConstraints = CA:TRUE, pathlen:0

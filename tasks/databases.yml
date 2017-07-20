@@ -1,0 +1,58 @@
+---
+
+- set_fact:
+    knex_root: "{{ ripple_solution_base }}/knexsql"
+
+- name: "Copy KNEX Tools"
+  copy:
+    src:   knexsql
+    dest:  "{{ ripple_solution_base }}"
+    force: yes
+    mode:  '0644'
+    directory_mode: '0755'
+
+- name: "Install KNEX Tools"
+  command: npm install
+  args:
+    chdir: "{{ knex_root }}"
+
+- name: "Create Ripple-Connect Database"
+  command: "node {{ knex_root }}/index.js < {{ ripple_solution_base }}/schema/postgres/ripple-connect-{{ ripple_solution_version }}.sql"
+  environment:
+    KNEXSQL_DB: "postgres://{{ ripple_connect_db_user }}:{{ ripple_connect_db_pass }}@{{ ripple_connect_db_host }}:{{ ripple_connect_db_port }}/{{ ripple_connect_db_name }}"
+  # register: result
+  # failed_when: "'Error' in result.stderr or
+  #               'error' in result.stderr or
+  #               'must be owner' in result.stderr"
+  when: ripple_connect_enabled | bool
+
+- name: "Create ILP Validator Database"
+  command: "node {{ knex_root }}/index.js < {{ ripple_solution_base }}/schema/postgres/validator-{{ ripple_solution_version }}.sql"
+  environment:
+    KNEXSQL_DB: "postgres://{{ ilp_validator_db_user }}:{{ ilp_validator_db_pass }}@{{ ilp_validator_db_host }}:{{ ilp_validator_db_port }}/{{ ilp_validator_db_name }}"
+  # register: result
+  # failed_when: "'Error' in result.stderr or
+  #               'error' in result.stderr or
+  #               'must be owner' in result.stderr"
+  when: ilp_validator_enabled | bool
+
+- name: "Create FX Connector Database"
+  command: "node {{ knex_root }}/index.js < {{ ripple_solution_base }}/schema/postgres/connector-{{ ripple_solution_version }}.sql"
+  environment:
+    KNEXSQL_DB: "postgres://{{ fx_connector_db_user }}:{{ fx_connector_db_pass }}@{{ fx_connector_db_host }}:{{ fx_connector_db_port }}/{{ fx_connector_db_name }}"
+  # register: result
+  # failed_when: "'Error' in result.stderr or
+  #               'error' in result.stderr or
+  #               'must be owner' in result.stderr"
+  when: fx_connector_enabled | bool
+
+- name: "Create Ledger Databases"
+  command: "node {{ knex_root }}/index.js < {{ ripple_solution_base }}/schema/postgres/ripple-connect-{{ ripple_solution_version }}.sql"
+  environment:
+    KNEXSQL_DB: "postgres://{{ item.db_user }}:{{ item.db_pass }}@{{ item.db_host }}:{{ item.db_port }}/{{ item.db_name }}"
+  # register: result
+  # failed_when: "'Error' in result.stderr or
+  #               'error' in result.stderr or
+  #               'must be owner' in result.stderr"
+  with_items:
+   - "{{ ilp_ledgers }}"

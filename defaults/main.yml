@@ -2,6 +2,7 @@
 # defaults file for ripple-solution
 
 # Ripple Paths
+ripple_solution_base:        /opt/ripple-solution
 ripple_solution_config_base: /opt/ripple-solution/config
 ripple_solution_cert_base:   /opt/ripple-solution/config/certs
 

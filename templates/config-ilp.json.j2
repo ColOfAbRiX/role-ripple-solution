@@ -2,17 +2,27 @@
   "ripple-connect":{
 {% if ripple_connect_enabled | bool %}
     "RC_CONFIGS_PATH": "{{ ripple_solution_config_base }}",
-    "RC_SECRETS_ENCRYPTED": {{ ripple_connect_secrets_encrypted}},
+    "RC_SECRETS_ENCRYPTED": {{ ripple_connect_secrets_encrypted }},
     "RC_ENABLE_UI": {{ ripple_connect_enable_ui }}
 {% endif %}
   },
 
-  "connector": {
-{% if fx_connector_enabled | bool %}
-    "CONNECTOR_TLS_CAS": {{ fx_connector_trusted_crts | to_nice_json }}
-{% endif %}
-  },
+{% for ledger in ilp_ledgers %}
+  "ledger{{ loop.index0 }}": {
+    "LEDGER_HOSTNAME": "{{ ledger.host }}",
+    "LEDGER_PORT": {{ ledger.port }},
+    "LEDGER_DB_URI": "postgres://{{ ledger.db_user }}:{{ ledger.db_pass }}@{{ ledger.db_host }}:{{ ledger.db_port }}/{{ ledger.db_name }}",
+    "LEDGER_TLS_KEY": "{{ key_path }}/{{ ledger_crt_prefix }}-key.pem",
+    "LEDGER_TLS_CERTIFICATE": "{{ cert_path }}/{{ ledger_crt_prefix }}-crt.pem",
+    "LEDGER_ADMIN_FINGERPRINT": "{{ fingerprints.results[ledger_crt_idx].stdout.split('=')[1] }}",
+    "LEDGER_AMOUNT_SCALE": {{ ripple_connect_config.amount_decimal_scale }},
+{% for key, value in ledger.config.iteritems() %}
+    "LEDGER_{{ key | upper }}": "{{ value }}",
+{% endfor %}
+    "LEDGER_TLS_CAS": {{ ledger.trusted_crts | to_nice_json }}
+  }
 
+{% endfor %}
   "validator": {
 {% if ilp_validator_enabled | bool %}
     "VALIDATOR_HOSTNAME": "{{ ilp_validator_host }}",
@@ -23,26 +33,42 @@
 {% endfor %}
     "VALIDATOR_ED25519_PUBLIC_KEY": "{{ validator_key.stdout_lines[0].split(' ')[2] }}",
     "VALIDATOR_ED25519_SECRET_KEY": "{{ validator_key.stdout_lines[1].split(' ')[2] }}",
-    "VALIDATOR_TLS_KEY": "{{ key_path }}/{{ ansible_hostname }}-validator-key.pem",
-    "VALIDATOR_TLS_CERTIFICATE": "{{ cert_path }}/{{ ansible_hostname }}-validator-crt.pem",
+    "VALIDATOR_TLS_KEY": "{{ key_path }}/{{ validator_crt_prefix }}-key.pem",
+    "VALIDATOR_TLS_CERTIFICATE": "{{ cert_path }}/{{ validator_crt_prefix }}-crt.pem",
     "VALIDATOR_TLS_CAS": {{ ilp_validator_trusted_crts | to_nice_json }}
 {% endif %}
   },
 
+  "connector": {
+{% if fx_connector_enabled | bool %}
+    "CONNECTOR_PORT": {{ fx_connector_port }},
+    "CONNECTOR_DB_URI": "postgres://{{ fx_connector_db_user }}:{{ fx_connector_db_pass }}@{{ fx_connector_db_host }}:{{ fx_connector_db_port }}/{{ fx_connector_db_name }}",
+    "CONNECTOR_TLS_KEY": "{{ key_path }}/{{ fx_connector_crt_prefix }}-key.pem",
+    "CONNECTOR_TLS_CERTIFICATE": "{{ cert_path }}/{{ fx_connector_crt_prefix }}-crt.pem",
+    "CONNECTOR_ADMIN_FINGERPRINT": "{{ fingerprints.results[fx_connector_crt_idx].stdout.split('=')[1] }}",
+{% for key, value in fx_connector_config.iteritems() %}
+    "CONNECTOR_{{ key | upper }}": "{{ value }}",
+{% endfor %}
+{% for secret_result in connector_secrets.results %}
+    "{{ secret_result.item }}": "{{ secret_result.stdout.split(' ')[2] }}",
+{% endfor %}
+    "CONNECTOR_TLS_CAS": {{ fx_connector_trusted_crts | to_nice_json }},
+    "CONNECTOR_LEDGER_CREDENTIALS": {
 {% for ledger in ilp_ledgers %}
-  "ledger{{ loop.index0 }}": {
-    "LEDGER_HOSTNAME": "{{ ledger.host }}",
-    "LEDGER_PORT": {{ ledger.port }},
-    "LEDGER_DB_URI": "postgres://{{ ledger.db_user }}:{{ ledger.db_pass }}@{{ ledger.db_host }}:{{ ledger.db_port }}/{{ ledger.db_name }}",
-    "LEDGER_ADMIN_FINGERPRINT": "{{ fingerprints.results[ledger_crt_idx].stdout.split('=')[1] }}",
-    "LEDGER_TLS_KEY": "{{ key_path }}/{{ ansible_hostname }}-ledger-key.pem",
-    "LEDGER_TLS_CERTIFICATE": "{{ cert_path }}/{{ ansible_hostname }}-ledger-crt.pem",
-    "LEDGER_AMOUNT_SCALE": {{ ripple_connect_config.amount_decimal_scale }},
-{% for key, value in ledger.config.iteritems() %}
-    "LEDGER_{{ key | upper }}": "{{ value }}",
+      "{% if ledger.config.auth_client_cert_enabled | default(False) | bool %}https{% else %}http{% endif %}://{{ ledger.host }}:{{ ledger.port }}/account/connector": {
+        "authorized_access_fingerprints": [
+          "{{ fingerprints.results[ripple_connect_crt_idx].stdout.split('=')[1] }}"
+        ],
+        "cert": "{{ key_path }}/{{ fx_connector_crt_prefix }}-key.pem",
+        "key": "{{ cert_path }}/{{ fx_connector_crt_prefix }}-crt.pem",
+        "ca": [
+          "{{ ca_cert }}"
+        ]
+      }
 {% endfor %}
-    "LEDGER_TLS_CAS": {{ ledger.trusted_crts | to_nice_json }}
-  }{% if not loop.last %},{% endif %}
-
-{% endfor %}
+    },
+    "CONNECTOR_PAIRS": [
+    ]
+{% endif %}
+  }
 }
