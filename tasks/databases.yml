@@ -1,9 +1,15 @@
 ---
 
 - set_fact:
-    knex_root: "{{ ripple_solution_base }}/knexsql"
+    knex_root:   "{{ ripple_solution_base }}/knexsql"
+    rc_db_uri:   "{{ ripple_solution_db_dialect }}://{{ ripple_connect_db_admin_user }}:{{ ripple_connect_db_admin_pass }}@{{ ripple_connect_db_host }}:{{ ripple_connect_db_port }}/{{ ripple_connect_db_name }}"
+    ilpv_db_uri: "{{ ripple_solution_db_dialect }}://{{ ilp_validator_db_admin_user }}:{{ ilp_validator_db_admin_pass }}@{{ ilp_validator_db_host }}:{{ ilp_validator_db_port }}/{{ ilp_validator_db_name }}"
+    fxc_db_uri:  "{{ ripple_solution_db_dialect }}://{{ fx_connector_db_admin_user }}:{{ fx_connector_db_admin_pass }}@{{ fx_connector_db_host }}:{{ fx_connector_db_port }}/{{ fx_connector_db_name }}"
 
-- name: "Copy KNEX Tools"
+- set_fact:
+    knex_cmd: "node {{ knex_root }}/index.js"
+
+- name: "Copy KNEXSQL Tools"
   copy:
     src:   knexsql
     dest:  "{{ ripple_solution_base }}"
@@ -11,48 +17,96 @@
     mode:  '0644'
     directory_mode: '0755'
 
-- name: "Install KNEX Tools"
+- name: "Install KNEXSQL Tools"
   command: npm install
   args:
     chdir: "{{ knex_root }}"
 
-- name: "Create Ripple-Connect Database"
-  command: "node {{ knex_root }}/index.js < {{ ripple_solution_base }}/schema/postgres/ripple-connect-{{ ripple_solution_version }}.sql"
+- name: "Learn Schema Version"
+  shell: "ls {{ ripple_solution_schema_base }}/*.sql | grep -Eo '[0-9]+\\.[0-9]+\\.[0-9]+' | sort | uniq"
+  args:
+    chdir: "{{ ripple_solution_schema_base }}"
+  register: schema_version
+
+
+- name: "Check Ripple-Connect Database"
+  shell: "{{ knex_cmd }} <<< 'SELECT * FROM public.db_schema_versions;'"
   environment:
-    KNEXSQL_DB: "postgres://{{ ripple_connect_db_user }}:{{ ripple_connect_db_pass }}@{{ ripple_connect_db_host }}:{{ ripple_connect_db_port }}/{{ ripple_connect_db_name }}"
-  # register: result
-  # failed_when: "'Error' in result.stderr or
-  #               'error' in result.stderr or
-  #               'must be owner' in result.stderr"
-  when: ripple_connect_enabled | bool
+    KNEXSQL_DB: "{{ rc_db_uri }}"
+  changed_when: false
+  failed_when: false
+  register: rc_db_present
+
+- name: "Create Ripple-Connect Database"
+  shell: "{{ knex_cmd }} < {{ ripple_solution_schema_base }}/ripple-connect-{{ schema_version.stdout }}.sql"
+  environment:
+    KNEXSQL_DB: "{{ rc_db_uri }}"
+  register: result
+  failed_when: "'Error' in result.stderr or
+                'error' in result.stderr or
+                'must be owner' in result.stderr"
+  when: "ripple_connect_enabled | bool and
+         'does not exist' in rc_db_present"
+
+
+- name: "Check ILP Validator Database"
+  shell: "{{ knex_cmd }} <<< 'SELECT * FROM public.db_schema_versions;'"
+  environment:
+    KNEXSQL_DB: "{{ ilpv_db_uri }}"
+  changed_when: false
+  failed_when: false
+  register: ilpv_db_present
 
 - name: "Create ILP Validator Database"
-  command: "node {{ knex_root }}/index.js < {{ ripple_solution_base }}/schema/postgres/validator-{{ ripple_solution_version }}.sql"
+  shell: "{{ knex_cmd }} < {{ ripple_solution_schema_base }}/validator-{{ schema_version.stdout }}.sql"
   environment:
-    KNEXSQL_DB: "postgres://{{ ilp_validator_db_user }}:{{ ilp_validator_db_pass }}@{{ ilp_validator_db_host }}:{{ ilp_validator_db_port }}/{{ ilp_validator_db_name }}"
-  # register: result
-  # failed_when: "'Error' in result.stderr or
-  #               'error' in result.stderr or
-  #               'must be owner' in result.stderr"
-  when: ilp_validator_enabled | bool
+    KNEXSQL_DB: "{{ ilpv_db_uri }}"
+  register: result
+  failed_when: "'Error' in result.stderr or
+                'error' in result.stderr or
+                'must be owner' in result.stderr"
+  when: "ilp_validator_enabled | bool and
+         'does not exist' in ilpv_db_present"
+
+
+- name: "Check FX Connector Database"
+  shell: "{{ knex_cmd }} <<< 'SELECT * FROM public.db_schema_versions;'"
+  environment:
+    KNEXSQL_DB: "{{ fxc_db_uri }}"
+  changed_when: false
+  failed_when: false
+  register: fxc_db_present
 
 - name: "Create FX Connector Database"
-  command: "node {{ knex_root }}/index.js < {{ ripple_solution_base }}/schema/postgres/connector-{{ ripple_solution_version }}.sql"
+  shell: "{{ knex_cmd }} < {{ ripple_solution_schema_base }}/connector-{{ schema_version.stdout }}.sql"
   environment:
-    KNEXSQL_DB: "postgres://{{ fx_connector_db_user }}:{{ fx_connector_db_pass }}@{{ fx_connector_db_host }}:{{ fx_connector_db_port }}/{{ fx_connector_db_name }}"
-  # register: result
-  # failed_when: "'Error' in result.stderr or
-  #               'error' in result.stderr or
-  #               'must be owner' in result.stderr"
-  when: fx_connector_enabled | bool
+    KNEXSQL_DB: "{{ fxc_db_uri }}"
+  register: result
+  failed_when: "'Error' in result.stderr or
+                'error' in result.stderr or
+                'must be owner' in result.stderr"
+  when: "fx_connector_enabled | bool and
+         'does not exist' in fxc_db_present"
+
+
+- name: "Check Ledger Database"
+  shell: "{{ knex_cmd }} <<< 'SELECT * FROM public.db_schema_versions;'"
+  environment:
+    KNEXSQL_DB: "{{ ripple_solution_db_dialect }}://{{ item.db_admin_user }}:{{ item.db_admin_pass }}@{{ item.db_host }}:{{ item.db_port }}/{{ item.db_name }}"
+  changed_when: false
+  failed_when: false
+  register: ldg_db_present
+  with_items:
+   - "{{ ilp_ledgers }}"
 
 - name: "Create Ledger Databases"
-  command: "node {{ knex_root }}/index.js < {{ ripple_solution_base }}/schema/postgres/ripple-connect-{{ ripple_solution_version }}.sql"
+  shell: "{{ knex_cmd }} < {{ ripple_solution_schema_base }}/ripple-connect-{{ schema_version.stdout }}.sql"
   environment:
-    KNEXSQL_DB: "postgres://{{ item.db_user }}:{{ item.db_pass }}@{{ item.db_host }}:{{ item.db_port }}/{{ item.db_name }}"
-  # register: result
-  # failed_when: "'Error' in result.stderr or
-  #               'error' in result.stderr or
-  #               'must be owner' in result.stderr"
-  with_items:
+    KNEXSQL_DB: "{{ ripple_solution_db_dialect }}://{{ item.1.db_admin_user }}:{{ item.1.db_admin_pass }}@{{ item.1.db_host }}:{{ item.1.db_port }}/{{ item.1.db_name }}"
+  register: result
+  failed_when: "'Error' in result.stderr or
+                'error' in result.stderr or
+                'must be owner' in result.stderr"
+  when: "'does not exist' in ldg_db_present.results[item.0]"
+  with_indexed_items:
    - "{{ ilp_ledgers }}"

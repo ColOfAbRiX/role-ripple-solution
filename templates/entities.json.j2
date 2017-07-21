@@ -1,0 +1,25 @@
+{
+    "domain": "{{ ansible_fqdn }}:{{ ripple_connect_port }}",
+
+    "known_remotes": [
+{% for item in ripple_solution_known_remotes %}
+      { "domain": "{{ item.ripple_connect_address }}" }{% if not loop.last %},{% endif %}
+
+{% endfor %}
+    ],
+
+    "connectors": [
+    ],
+
+    "validators": [
+    ],
+
+    "ledgers": [
+    ],
+
+    "liquidity_provider_nostro_accounts": [
+    ],
+
+    "liquidity_to_validators_map": [
+    ]
+}

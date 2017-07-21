@@ -4,7 +4,7 @@
 
 ```
 # With postgres, a database is required.  Use 'postgres' when creating a new db.
-export KNEXSQL_DB=postgres://client_user:client_password@postgres94.cojrajw6pfyj.us-west-2.rds.amazonaws.com:5432/postgres 
+export KNEXSQL_DB=postgres://client_user:client_password@postgres94.cojrajw6pfyj.us-west-2.rds.amazonaws.com:5432/postgres
 
 echo "CREATE DATABASE test_db" | node index.js
 ```

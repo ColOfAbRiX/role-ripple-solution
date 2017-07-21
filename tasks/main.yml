@@ -5,20 +5,25 @@
   include: install.yml
   tags: [ripple-solution, ripple-install]
 
-- name: "Configure PostgreSQL"
+- name: "RDBMS Configuration Stage 1"
   delegate_to: localhost
-  include: postgres.yml
+  include: "{{ ripple_solution_db_dialect }}_pre.yml"
   tags: [ripple-solution, ripple-postgres]
 
-- name: "Configure Databases"
+- name: "Install Databases"
   include: databases.yml
   tags: [ripple-solution, ripple-databases]
+
+- name: "RDBMS Configuration Stage 2"
+  delegate_to: localhost
+  include: "{{ ripple_solution_db_dialect }}_post.yml"
+  tags: [ripple-solution, ripple-postgres]
 
 - name: "Create Certificates"
   include: certificates.yml
   tags: [ripple-solution, ripple-certificates]
 
-- name: "Configure Ripple"
+- name: "Ripple Configuration"
   become_user: ripple_solution
   include: config.yml
   tags: [ripple-solution, ripple-configuration]

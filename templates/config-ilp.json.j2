@@ -11,7 +11,7 @@
   "ledger{{ loop.index0 }}": {
     "LEDGER_HOSTNAME": "{{ ledger.host }}",
     "LEDGER_PORT": {{ ledger.port }},
-    "LEDGER_DB_URI": "postgres://{{ ledger.db_user }}:{{ ledger.db_pass }}@{{ ledger.db_host }}:{{ ledger.db_port }}/{{ ledger.db_name }}",
+    "LEDGER_DB_URI": "{{ ripple_solution_db_dialect }}://{{ ledger.db_user }}:{{ ledger.db_pass }}@{{ ledger.db_host }}:{{ ledger.db_port }}/{{ ledger.db_name }}",
     "LEDGER_TLS_KEY": "{{ key_path }}/{{ ledger_crt_prefix }}-key.pem",
     "LEDGER_TLS_CERTIFICATE": "{{ cert_path }}/{{ ledger_crt_prefix }}-crt.pem",
     "LEDGER_ADMIN_FINGERPRINT": "{{ fingerprints.results[ledger_crt_idx].stdout.split('=')[1] }}",
@@ -20,14 +20,14 @@
     "LEDGER_{{ key | upper }}": "{{ value }}",
 {% endfor %}
     "LEDGER_TLS_CAS": {{ ledger.trusted_crts | to_nice_json }}
-  }
+  },
 
 {% endfor %}
   "validator": {
 {% if ilp_validator_enabled | bool %}
     "VALIDATOR_HOSTNAME": "{{ ilp_validator_host }}",
     "VALIDATOR_PORT": {{ ilp_validator_port }},
-    "VALIDATOR_DB_URI": "postgres://{{ ilp_validator_db_user }}:{{ ilp_validator_db_pass }}@{{ ilp_validator_db_host }}:{{ ilp_validator_db_port }}/{{ ilp_validator_db_name }}",
+    "VALIDATOR_DB_URI": "{{ ripple_solution_db_dialect }}://{{ ilp_validator_db_user }}:{{ ilp_validator_db_pass }}@{{ ilp_validator_db_host }}:{{ ilp_validator_db_port }}/{{ ilp_validator_db_name }}",
 {% for key, value in ilp_validator_config.iteritems() %}
     "VALIDATOR_{{ key | upper }}": "{{ value }}",
 {% endfor %}
@@ -42,7 +42,7 @@
   "connector": {
 {% if fx_connector_enabled | bool %}
     "CONNECTOR_PORT": {{ fx_connector_port }},
-    "CONNECTOR_DB_URI": "postgres://{{ fx_connector_db_user }}:{{ fx_connector_db_pass }}@{{ fx_connector_db_host }}:{{ fx_connector_db_port }}/{{ fx_connector_db_name }}",
+    "CONNECTOR_DB_URI": "{{ ripple_solution_db_dialect }}://{{ fx_connector_db_user }}:{{ fx_connector_db_pass }}@{{ fx_connector_db_host }}:{{ fx_connector_db_port }}/{{ fx_connector_db_name }}",
     "CONNECTOR_TLS_KEY": "{{ key_path }}/{{ fx_connector_crt_prefix }}-key.pem",
     "CONNECTOR_TLS_CERTIFICATE": "{{ cert_path }}/{{ fx_connector_crt_prefix }}-crt.pem",
     "CONNECTOR_ADMIN_FINGERPRINT": "{{ fingerprints.results[fx_connector_crt_idx].stdout.split('=')[1] }}",

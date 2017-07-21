@@ -1,0 +1,32 @@
+---
+
+- name: "Grant Users Privileges to Schema"
+  postgresql_privs:
+    login_host:      "{{ item.db_host }}"
+    login_user:      "{{ item.db_admin_user }}"
+    login_password:  "{{ item.db_admin_pass }}"
+    port:            "{{ item.db_port }}"
+    db:              "{{ item.db_name }}"
+    role:            "{{ item.db_user }}"
+    type:            schema
+    priv:            USAGE
+    objs:            public
+  when: item.enabled | default(False) | bool
+  with_items:
+   - "{{ db_info }}"
+
+- name: "Grant Users Privileges to Tables"
+  postgresql_privs:
+    login_host:      "{{ item.db_host }}"
+    login_user:      "{{ item.db_admin_user }}"
+    login_password:  "{{ item.db_admin_pass }}"
+    port:            "{{ item.db_port }}"
+    db:              "{{ item.db_name }}"
+    role:            "{{ item.db_user }}"
+    schema:          public
+    type:            table
+    priv:            SELECT,UPDATE,INSERT,DELETE
+    objs:            ALL_IN_SCHEMA
+  when: item.enabled | default(False) | bool
+  with_items:
+   - "{{ db_info }}"
