@@ -5,42 +5,70 @@
 #
 
 - name: "Encrypt Known Remotes Passwords"
-  shell: "node /opt/ripple-solution/scripts/encrypt_string.js {{ key_path }}/{{ ripple_solution_admin_crt_prefix }}-key.pem <<<{{ item.password }}"
+  shell: "node /opt/ripple-solution/scripts/encrypt_string.js {{ key_path }}/{{ ripple_solution_admin_crt_prefix }}-key.pem <<< '{{ item.password }}'"
   register: encrypted_known_remote_passwords
   with_items:
-   - "{{ ripple_solution_known_remotes }}"
+   - "{{ ripple_connect_remotes }}"
 
 - name: "Encrypt Database Passwords"
-  shell: "node /opt/ripple-solution/scripts/encrypt_string.js {{ key_path }}/{{ ripple_solution_admin_crt_prefix }}-key.pem <<<{{ ripple_connect_db_pass }}"
+  shell: "node /opt/ripple-solution/scripts/encrypt_string.js {{ key_path }}/{{ ripple_solution_admin_crt_prefix }}-key.pem <<< '{{ ripple_connect_db_pass }}'"
   register: encrypted_database_password
 
 #
 # Passwords hashing
 #
 
-- name: "Hash Partner Passwords"
-  shell: "node /opt/ripple-solution/scripts/hash_password.js <<<{{ item.username }}:RippleSolution:{{ item.password }}"
-  register: hashed_partner_passwords
-  with_items:
-   - "{{ ripple_solution_partners }}"
-
 - name: "Hash Operator Passwords"
-  shell: "node /opt/ripple-solution/scripts/hash_password.js <<<{{ item.username }}:RippleSolution:{{ item.password }}"
+  shell: "node /opt/ripple-solution/scripts/hash_password.js <<< '{{ item.username }}:RippleSolution:{{ item.password }}'"
   register: hashed_operator_passwords
   with_items:
-   - "{{ ripple_solution_operators }}"
-
-- name: "Hash Custom Rate Operator Passwords"
-  shell: "node /opt/ripple-solution/scripts/hash_password.js <<<{{ item.username }}:RippleSolution:{{ item.password }}"
-  register: hashed_custom_rate_operators_passwords
-  with_items:
-   - "{{ ripple_solution_custom_rate_operator }}"
+   - "{{ ripple_connect_users | selectattr('type', 'equalto', 'operator') | list }}"
 
 - name: "Hash Monitor Passwords"
-  shell: "node /opt/ripple-solution/scripts/hash_password.js <<<{{ item.username }}:RippleSolution:{{ item.password }}"
+  shell: "node /opt/ripple-solution/scripts/hash_password.js <<< '{{ item.username }}:RippleSolution:{{ item.password }}'"
   register: hashed_monitor_passwords
   with_items:
-   - "{{ ripple_solution_monitors }}"
+   - "{{ ripple_connect_users | selectattr('type', 'equalto', 'monitor') | list }}"
+
+- name: "Hash Custom Rate Operator Passwords"
+  shell: "node /opt/ripple-solution/scripts/hash_password.js <<< '{{ item.username }}:RippleSolution:{{ item.password }}'"
+  register: hashed_custom_rate_operator_passwords
+  with_items:
+   - "{{ ripple_connect_users | selectattr('type', 'equalto', 'custom_rate_operator') | list }}"
+
+- name: "Hash Partner Passwords"
+  shell: "node /opt/ripple-solution/scripts/hash_password.js <<< '{{ item.username }}:RippleSolution:{{ item.password }}'"
+  register: hashed_partner_passwords
+  with_items:
+   - "{{ ripple_connect_remotes | sum(attribute='users', start=[]) | list }}"
+
+#
+# Read Key Pairs
+#
+
+- name: "Read Secret Keys"
+  shell: "cat {{ pia_path }}/{{ item }}.pia"
+  register: ripple_connect_secrets
+  changed_when: false
+  with_items:
+   - mac_key
+   - external_access_token_key
+   - client_access_token_key
+   - ilp_key
+
+- name: "Read Connector Secrets"
+  shell: "cat {{ pia_path }}/{{ item }}.pia"
+  register: connector_secrets
+  changed_when: false
+  with_items:
+   - CONNECTOR_QUOTE_HMAC_KEY
+  when: fx_connector_enabled | bool
+
+- name: "Read Secrets"
+  shell: "cat {{ pia_path }}/validator_key_pair.pia"
+  changed_when: false
+  register: validator_key
+  when: ilp_validator_enabled | bool
 
 #
 # Configuration files
@@ -48,6 +76,10 @@
 
 - name: "Construct Files Content"
   set_fact:
+    ripple_connect_url: "http{% if ripple_connect_config.use_https | default(True) | bool %}s{% endif %}://{{ ripple_connect_host }}:{{ ripple_connect_port }}"
+    fx_connector_url:   "http{% if fx_connector_config.use_https | default(True) | bool %}s{% endif %}://{{ fx_connector_host }}:{{ fx_connector_port }}"
+    ilp_validator_url:  "http{% if ilp_validator_config.use_https | default(True) | bool %}s{% endif %}://{{ ilp_validator_host }}:{{ ilp_validator_port }}"
+
     database_file:
       dialect:  "{{ ripple_solution_db_dialect }}"
       host:     "{{ ripple_connect_db_host }}"
@@ -65,6 +97,20 @@
        - "{{ cert_path }}/consumer-ca-crt.pem"
 
     config_file: "{{ ripple_connect_config }}"
+
+    client_credentials:
+      operator:
+        users:  "{{ ripple_connect_users | selectattr('type', 'equalto', 'operator') | list }}"
+        hashes: "{{ hashed_operator_passwords }}"
+      monitor:
+        users:  "{{ ripple_connect_users | selectattr('type', 'equalto', 'monitor') | list }}"
+        hashes: "{{ hashed_monitor_passwords }}"
+      partner:
+        users:  "{{ ripple_connect_remotes | sum(attribute='users', start=[]) | list }}"
+        hashes: "{{ hashed_partner_passwords }}"
+      custom_rate_operator:
+        users:  "{{ ripple_connect_users | selectattr('type', 'equalto', 'custom_rate_operator') | list }}"
+        hashes: "{{ hashed_custom_rate_operator_passwords }}"
 
 - name: "Clean Examples"
   shell: "rm -f {{ ripple_solution_config_base }}/*example*"

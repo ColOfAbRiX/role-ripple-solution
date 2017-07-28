@@ -19,7 +19,14 @@
 {% for key, value in ledger.config.iteritems() %}
     "LEDGER_{{ key | upper }}": "{{ value }}",
 {% endfor %}
-    "LEDGER_TLS_CAS": {{ ledger.trusted_crts | to_nice_json }}
+    "LEDGER_TLS_CAS": [
+      "{{ ca_cert }}"{% if ledger.remotes | length > 0 %},{% endif %}
+
+{% for remote in ledger.remotes | default([]) %}
+      "{{ cert_path }}/{{ remote.trusted_cert }}"{% if not loop.last %},{% endif %}
+
+{% endfor %}
+    ]
   },
 
 {% endfor %}
@@ -35,7 +42,14 @@
     "VALIDATOR_ED25519_SECRET_KEY": "{{ validator_key.stdout_lines[1].split(' ')[2] }}",
     "VALIDATOR_TLS_KEY": "{{ key_path }}/{{ validator_crt_prefix }}-key.pem",
     "VALIDATOR_TLS_CERTIFICATE": "{{ cert_path }}/{{ validator_crt_prefix }}-crt.pem",
-    "VALIDATOR_TLS_CAS": {{ ilp_validator_trusted_crts | to_nice_json }}
+    "VALIDATOR_TLS_CAS": [
+      "{{ ca_cert }}"{% if ilp_validator_remotes | length > 0 %},{% endif %}
+
+{% for remote in ilp_validator_remotes | default([]) %}
+      "{{ cert_path }}/{{ remote.trusted_cert }}"{% if not loop.last %},{% endif %}
+
+{% endfor %}
+    ]
 {% endif %}
   },
 
@@ -52,7 +66,14 @@
 {% for secret_result in connector_secrets.results %}
     "{{ secret_result.item }}": "{{ secret_result.stdout.split(' ')[2] }}",
 {% endfor %}
-    "CONNECTOR_TLS_CAS": {{ fx_connector_trusted_crts | to_nice_json }},
+    "CONNECTOR_TLS_CAS": [
+      "{{ ca_cert }}"{% if fx_connector_remotes | length > 0 %},{% endif %}
+
+{% for remote in fx_connector_remotes | default([]) %}
+      "{{ cert_path }}/{{ remote.trusted_cert }}"{% if not loop.last %},{% endif %}
+
+{% endfor %}
+    ],
     "CONNECTOR_LEDGER_CREDENTIALS": {
 {% for ledger in ilp_ledgers %}
       "{% if ledger.config.auth_client_cert_enabled | default(False) | bool %}https{% else %}http{% endif %}://{{ ledger.host }}:{{ ledger.port }}/account/connector": {

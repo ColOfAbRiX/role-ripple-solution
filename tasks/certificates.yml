@@ -4,6 +4,7 @@
     cert_path: "{{ ripple_solution_cert_base }}/crt"
     key_path:  "{{ ripple_solution_cert_base }}/key"
     csr_path:  "{{ ripple_solution_cert_base }}/csr"
+    pia_path:  "{{ ripple_solution_cert_base }}/pia"
 
 - set_fact:
     ca_cert:   "{{ cert_path }}/{{ ripple_solution_ca_prefix }}.crt"
@@ -25,6 +26,7 @@
    - { path: "{{ cert_path }}", mode: '0755' }
    - { path: "{{ key_path }}",  mode: '0750' }
    - { path: "{{ csr_path }}",  mode: '0750' }
+   - { path: "{{ pia_path }}",  mode: '0750' }
 
 #
 # Root CA Certificate
@@ -115,48 +117,25 @@
 #
 
 - name: "Secret Keys"
-  shell: "node /opt/ripple-solution/scripts/secret_key_generator.js > {{ key_path }}/{{ item }}.pia"
+  shell: "node /opt/ripple-solution/scripts/secret_key_generator.js > {{ pia_path }}/{{ item }}.pia"
   args:
-    creates: "{{ key_path }}/{{ item }}.pia"
+    creates: "{{ pia_path }}/{{ item }}.pia"
   with_items:
    - mac_key
    - external_access_token_key
    - client_access_token_key
    - ilp_key
-
-- name: "Read Secret Keys"
-  shell: "cat {{ key_path }}/{{ item }}.pia"
-  register: ripple_connect_secrets
-  with_items:
-   - mac_key
-   - external_access_token_key
-   - client_access_token_key
-   - ilp_key
-
 
 - name: "Connector Secrets"
-  shell: "node /opt/ripple-solution/scripts/secret_key_generator.js > {{ key_path }}/{{ item }}.pia"
+  shell: "node /opt/ripple-solution/scripts/secret_key_generator.js > {{ pia_path }}/{{ item }}.pia"
   args:
-    creates: "{{ key_path }}/{{ item }}.pia"
+    creates: "{{ pia_path }}/{{ item }}.pia"
   with_items:
    - CONNECTOR_QUOTE_HMAC_KEY
   when: fx_connector_enabled | bool
-
-- name: "Read Connector Secrets"
-  shell: "cat {{ key_path }}/{{ item }}.pia"
-  register: connector_secrets
-  with_items:
-   - CONNECTOR_QUOTE_HMAC_KEY
-  when: fx_connector_enabled | bool
-
 
 - name: "Validator Secrets"
-  shell: "node /opt/ripple-solution/scripts/ed25519_key_pair_generator.js > {{ key_path }}/validator_key_pair.pia"
+  shell: "node /opt/ripple-solution/scripts/ed25519_key_pair_generator.js > {{ pia_path }}/validator_key_pair.pia"
   args:
-    creates: "{{ key_path }}/validator_key_pair.pia"
-  when: ilp_validator_enabled | bool
-
-- name: "Read Secrets"
-  shell: "cat {{ key_path }}/validator_key_pair.pia"
-  register: validator_key
+    creates: "{{ pia_path }}/validator_key_pair.pia"
   when: ilp_validator_enabled | bool

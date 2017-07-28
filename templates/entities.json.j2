@@ -2,19 +2,48 @@
     "domain": "{{ ansible_fqdn }}:{{ ripple_connect_port }}",
 
     "known_remotes": [
-{% for item in ripple_solution_known_remotes %}
-      { "domain": "{{ item.ripple_connect_address }}" }{% if not loop.last %},{% endif %}
+{% for item in ripple_connect_remotes %}
+      { "domain": "{{ item.address }}" }{% if not loop.last %},{% endif %}
 
 {% endfor %}
     ],
 
     "connectors": [
+{% if fx_connector_install_local | default(False) | bool %}
+      "{{ fx_connector_url }}"{% if ripple_connect_connectors | default([]) %},{% endif %}
+
+{% endif %}
+{% for item in ripple_connect_connectors | default([]) %}
+      "{{ item.url }}"{% if not loop.last %},{% endif %}
+
+{% endfor %}
     ],
 
     "validators": [
+{% if ilp_validator_install_local | default(False) | bool %}
+      {
+        "iri": "{{ ilp_validator_url }}",
+        "public_key": "{{ validator_key.stdout_lines[0].split(' ')[2] }}"
+      }{% if ripple_connect_validators | default([]) %},{% endif %}
+
+{% endif %}
+{% for item in ripple_connect_validators | default([]) %}
+      {
+        "iri": "{{ item.iri }}",
+        "public_key": "{{ item.public_key }}"
+      }{% if not loop.last %},{% endif %}
+
+{% endfor %}
     ],
 
     "ledgers": [
+{% for ledger in ilp_ledgers if ledger.install_local | default(False) | bool %}
+      "{{ ledger.currency | upper }}": {
+        "address": "",
+        "account": "http{% if ledger.config.use_https | default(True) | bool %}s{% endif %}://{{ ledger.host }}:{{ ledger.port }}/account/transact"
+      }{% if not loop.last %},{% endif %}
+
+{% endfor %}
     ],
 
     "liquidity_provider_nostro_accounts": [
