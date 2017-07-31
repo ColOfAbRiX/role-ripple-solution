@@ -1,5 +1,5 @@
 {
-  "ripple-connect":{
+  "ripple-connect": {
 {% if ripple_connect_enabled | bool %}
     "RC_CONFIGS_PATH": "{{ ripple_solution_config_base }}",
     "RC_SECRETS_ENCRYPTED": {{ ripple_connect_secrets_encrypted }},
@@ -35,7 +35,7 @@
     "VALIDATOR_HOSTNAME": "{{ ilp_validator_host }}",
     "VALIDATOR_PORT": {{ ilp_validator_port }},
     "VALIDATOR_DB_URI": "{{ ripple_solution_db_dialect }}://{{ ilp_validator_db_user }}:{{ ilp_validator_db_pass }}@{{ ilp_validator_db_host }}:{{ ilp_validator_db_port }}/{{ ilp_validator_db_name }}",
-{% for key, value in ilp_validator_config.iteritems() %}
+{% for key, value in (ilp_validator_config | default({})).iteritems() %}
     "VALIDATOR_{{ key | upper }}": "{{ value }}",
 {% endfor %}
     "VALIDATOR_ED25519_PUBLIC_KEY": "{{ validator_key.stdout_lines[0].split(' ')[2] }}",
@@ -60,7 +60,7 @@
     "CONNECTOR_TLS_KEY": "{{ key_path }}/{{ fx_connector_crt_prefix }}-key.pem",
     "CONNECTOR_TLS_CERTIFICATE": "{{ cert_path }}/{{ fx_connector_crt_prefix }}-crt.pem",
     "CONNECTOR_ADMIN_FINGERPRINT": "{{ fingerprints.results[fx_connector_crt_idx].stdout.split('=')[1] }}",
-{% for key, value in fx_connector_config.iteritems() %}
+{% for key, value in (fx_connector_config | default({})).iteritems() %}
     "CONNECTOR_{{ key | upper }}": "{{ value }}",
 {% endfor %}
 {% for secret_result in connector_secrets.results %}
@@ -75,7 +75,7 @@
 {% endfor %}
     ],
     "CONNECTOR_LEDGER_CREDENTIALS": {
-{% for ledger in ilp_ledgers %}
+{% for ledger in ilp_ledgers | default([]) %}
       "{% if ledger.config.auth_client_cert_enabled | default(False) | bool %}https{% else %}http{% endif %}://{{ ledger.host }}:{{ ledger.port }}/account/connector": {
         "authorized_access_fingerprints": [
           "{{ fingerprints.results[ripple_connect_crt_idx].stdout.split('=')[1] }}"
@@ -85,10 +85,34 @@
         "ca": [
           "{{ ca_cert }}"
         ]
-      }
+      }{% if fx_connector_ledgers | default([]) | length > 0 %},{% endif %}
+
+{% endfor %}
+{% for ledger in fx_connector_ledgers | default([]) %}
+      "{{ ledger.url }}/account/connector": {
+        "authorized_access_fingerprints": [
+{% for f in ledger.fingerprints | default([]) %}
+          "{{ f }}"{% if not loop.last %},{% endif %}
+
+{% endfor %}
+        ],
+        "cert": "{{ key_path }}/{{ fx_connector_crt_prefix }}-key.pem",
+        "key": "{{ cert_path }}/{{ fx_connector_crt_prefix }}-crt.pem",
+        "ca": [
+          "{{ ca_cert }}"
+        ]
+      }{% if not loop.last %},{% endif %}
+
 {% endfor %}
     },
     "CONNECTOR_PAIRS": [
+{% for pair in fx_connector_pairs | default([]) %}
+      [
+        "{{ pair.source }}",
+        "{{ pair.dest }}"
+      ]{% if not loop.last %},{% endif %}
+
+{% endfor %}
     ]
 {% endif %}
   }

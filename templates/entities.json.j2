@@ -3,13 +3,15 @@
 
     "known_remotes": [
 {% for item in ripple_connect_remotes %}
-      { "domain": "{{ item.address }}" }{% if not loop.last %},{% endif %}
+      {
+        "domain": "{{ item.address }}"
+      }{% if not loop.last %},{% endif %}
 
 {% endfor %}
     ],
 
     "connectors": [
-{% if fx_connector_install_local | default(False) | bool %}
+{% if fx_connector_enabled | bool and fx_connector_install_local | default(False) | bool %}
       "{{ fx_connector_url }}"{% if ripple_connect_connectors | default([]) %},{% endif %}
 
 {% endif %}
@@ -20,7 +22,7 @@
     ],
 
     "validators": [
-{% if ilp_validator_install_local | default(False) | bool %}
+{% if ilp_validator_enabled | bool and ilp_validator_install_local | default(False) | bool %}
       {
         "iri": "{{ ilp_validator_url }}",
         "public_key": "{{ validator_key.stdout_lines[0].split(' ')[2] }}"
@@ -36,19 +38,39 @@
 {% endfor %}
     ],
 
-    "ledgers": [
+    "ledgers": {
 {% for ledger in ilp_ledgers if ledger.install_local | default(False) | bool %}
-      "{{ ledger.currency | upper }}": {
-        "address": "",
+      "{{ ledger.currency | upper }}": [{
+        "address": "{{ ledger.host }}",
         "account": "http{% if ledger.config.use_https | default(True) | bool %}s{% endif %}://{{ ledger.host }}:{{ ledger.port }}/account/transact"
-      }{% if not loop.last %},{% endif %}
+      }]{% if ripple_connect_ledgers | default([]) %},{% endif %}
 
 {% endfor %}
-    ],
+{% for ledger in ripple_connect_ledgers | default([]) %}
+      "{{ ledger.currency | upper }}": [
+        "address": "{{ ledger.address }}",
+        "account": "{{ ledger.account }}"
+      ]{% if not loop.last %},{% endif %}
+
+{% endfor %}
+    },
 
     "liquidity_provider_nostro_accounts": [
     ],
 
-    "liquidity_to_validators_map": [
-    ]
+    "liquidity_to_validators_map": {
+{% if fx_connector_enabled | bool and fx_connector_install_local | default(False) | bool %}
+{% if fx_connector_use_validator_url | default('') != '' %}
+      "{{ fx_connector_url }}": [ "{{ fx_connector_use_validator_url }}" ]{% if ripple_connect_connector_validator_pairs | default([]) %},{% endif %}
+
+{% elif ilp_validator_enabled | bool and ilp_validator_install_local | default(False) | bool %}
+      "{{ fx_connector_url }}": [ "{{ ilp_validator_url }}" ]{% if ripple_connect_connector_validator_pairs | default([]) %},{% endif %}
+
+{% endif %}
+{% endif %}
+{% for item in ripple_connect_connector_validator_pairs | default([]) %}
+      "{{ item.connector_url }}": [ "{{ item.validator_url }}" ]{% if not loop.last %},{% endif %}
+
+{% endfor %}
+    }
 }

@@ -76,9 +76,9 @@
 
 - name: "Construct Files Content"
   set_fact:
-    ripple_connect_url: "http{% if ripple_connect_config.use_https | default(True) | bool %}s{% endif %}://{{ ripple_connect_host }}:{{ ripple_connect_port }}"
-    fx_connector_url:   "http{% if fx_connector_config.use_https | default(True) | bool %}s{% endif %}://{{ fx_connector_host }}:{{ fx_connector_port }}"
-    ilp_validator_url:  "http{% if ilp_validator_config.use_https | default(True) | bool %}s{% endif %}://{{ ilp_validator_host }}:{{ ilp_validator_port }}"
+    ripple_connect_url: "http{% if ripple_connect_config.use_https | default(True) | bool %}s{% endif %}://{{ ripple_connect_host | default(omit) }}:{{ ripple_connect_port | default(omit) }}"
+    fx_connector_url:   "http{% if fx_connector_config.use_https | default(True) | bool %}s{% endif %}://{{ fx_connector_host | default(omit) }}:{{ fx_connector_port | default(omit) }}"
+    ilp_validator_url:  "http{% if ilp_validator_config.use_https | default(True) | bool %}s{% endif %}://{{ ilp_validator_host | default(omit) }}:{{ ilp_validator_port | default(omit) }}"
 
     database_file:
       dialect:  "{{ ripple_solution_db_dialect }}"

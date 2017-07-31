@@ -5,7 +5,7 @@
   include: install.yml
   tags: [ripple-solution]
 
-- name: "RDBMS Configuration Stage 1"
+- name: "Pre-Configuration RDBMS"
   delegate_to: localhost
   include: "{{ ripple_solution_db_dialect }}_pre.yml"
   tags: [ripple-solution]
@@ -14,7 +14,7 @@
   include: databases.yml
   tags: [ripple-solution]
 
-- name: "RDBMS Configuration Stage 2"
+- name: "Post-Configuration RDBMS"
   delegate_to: localhost
   include: "{{ ripple_solution_db_dialect }}_post.yml"
   tags: [ripple-solution]
