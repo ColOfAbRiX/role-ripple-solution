@@ -5,28 +5,23 @@
     key_path:  "{{ ripple_solution_cert_base }}/key"
     csr_path:  "{{ ripple_solution_cert_base }}/csr"
     pia_path:  "{{ ripple_solution_cert_base }}/pia"
+    cert_ext_path: "{{ ripple_solution_cert_base }}/remotes"
 
 - set_fact:
     ca_cert:   "{{ cert_path }}/{{ ripple_solution_ca_prefix }}.crt"
     ca_key:    "{{ key_path }}/{{ ripple_solution_ca_prefix }}.key"
+    crypto_directories:
+     - { path: "{{ ripple_solution_cert_base }}", mode: '0755' }
+     - { path: "{{ cert_ext_path }}",  mode: '0755' }
+     - { path: "{{ cert_path }}", mode: '0755' }
+     - { path: "{{ key_path }}",  mode: '0750' }
+     - { path: "{{ csr_path }}",  mode: '0750' }
+     - { path: "{{ pia_path }}",  mode: '0750' }
 
-- name: "Create Required Directories"
-  file:
-    path:   "{{ item.path }}"
-    state:  directory
-    mode:   "{{ item.mode }}"
-    force:  yes
-    owner:  "{{ ripple_solution_user }}"
-    group:  "{{ ripple_solution_group }}"
-    seuser: system_u
-    serole: object_r
-    setype: usr_t
+- name: "Create Crypto Directories"
+  file: path="{{ item.path }}" state=directory mode="{{ item.mode }}"
   with_items:
-   - { path: "{{ ripple_solution_cert_base }}", mode: '0755' }
-   - { path: "{{ cert_path }}", mode: '0755' }
-   - { path: "{{ key_path }}",  mode: '0750' }
-   - { path: "{{ csr_path }}",  mode: '0750' }
-   - { path: "{{ pia_path }}",  mode: '0750' }
+   - "{{ crypto_directories }}"
 
 #
 # Root CA Certificate
@@ -34,32 +29,28 @@
 
 - name: "OpenSSL Configuration"
   template:
-    src:    "openssl.cnf.j2"
-    dest:   "{{ ripple_solution_config_base }}/openssl.cnf"
+    src:    "openssl/{{ item }}.j2"
+    dest:   "{{ ripple_solution_config_base }}/{{ item }}"
     mode:   '0644'
     owner:  "{{ ripple_solution_user }}"
     group:  "{{ ripple_solution_group }}"
     seuser: system_u
     serole: object_r
     setype: usr_t
-
-- name: "Check CA Certificate"
-  stat: path="{{ ca_cert }}"
-  register: ca_stat
-
-- name: "Ensure we can overwrite existing key"
-  file: path="{{ item }}" mode="u+w"
   with_items:
-   - "{{ ca_cert }}"
-   - "{{ ca_key }}"
-  ignore_errors: true
+   - openssl-host_ca.cnf
+   - openssl-cert.cnf
 
 - name: "Create Certification Authority Certificate"
-  shell: umask 337; openssl req -nodes -new -x509 -days 9999 -sha256 -config "{{ ripple_solution_config_base }}/openssl.cnf" -keyout "{{ ca_key }}" -out "{{ ca_cert }}"
-  when: not ca_stat.stat.exists
-
-- name: "Set permissions on CA"
-  file: path="{{ ca_cert }}" mode="go+r"
+  shell: |
+    openssl req \
+      -new -nodes -x509 -days 36524 \
+      -keyout "{{ ca_key }}" \
+      -out "{{ ca_cert }}"
+  args:
+    creates: "{{ ca_cert }}"
+  environment:
+    OPENSSL_CONF: "{{ ripple_solution_config_base }}/openssl-host_ca.cnf"
 
 #
 # Other SSL Certificates
@@ -67,75 +58,128 @@
 
 - set_fact:
     cert_items:
-     - "{{ ripple_solution_admin_crt_prefix }}"
-     - "{{ fx_connector_crt_prefix }}"
-     - "{{ ledger_crt_prefix }}"
-     - "{{ ripple_connect_crt_prefix }}"
-     - "{{ validator_crt_prefix }}"
+     - { prefix: "{{ ripple_solution_admin_crt_prefix }}", check: true }
+     - { prefix: "{{ fx_connector_crt_prefix }}",          check: "{{ fx_connector_enabled | default(False) | bool }}" }
+     - { prefix: "{{ ledger_crt_prefix }}",                check: "{{ ilp_ledgers | default([]) | length > 0 }}" }
+     - { prefix: "{{ ripple_connect_crt_prefix }}",        check: "{{ ripple_connect_enabled | default(False) | bool }}" }
+     - { prefix: "{{ validator_crt_prefix }}",             check: "{{ ilp_validator_enabled | default(False) | bool }}" }
     admin_crt_idx:          0
     fx_connector_crt_idx:   1
     ledger_crt_idx:         2
     ripple_connect_crt_idx: 3
     validator_crt_idx:      4
 
-- name: "Read Key Info"
-  stat: path="{{ key_path }}/{{ item }}-key.pem"
+- name: "Create Private Key"
+  shell: openssl genrsa -out "{{ key_path }}/{{ item.prefix }}-key.pem" 2048
+  args:
+    creates: "{{ key_path }}/{{ item.prefix }}-key.pem"
+  environment:
+    OPENSSL_CONF: "{{ ripple_solution_config_base }}/openssl-cert.cnf"
+  when: item.check
   with_items:
    - "{{ cert_items }}"
-  register: key_stat
-
-- name: "Create Private Key"
-  shell: openssl genrsa -out "{{ key_path }}/{{ item.item }}-key.pem" 4096
-  with_items:
-   - "{{ key_stat.results }}"
-  when: not item.stat.exists
 
 - name: "Create CSR"
-  shell: openssl req -sha256 -new -key "{{ key_path }}/{{ item.item }}-key.pem" -out "{{ csr_path }}/{{ item.item }}-csr.pem" -subj "/CN={{ ansible_fqdn }}"
+  shell: |
+    openssl req \
+     -sha256 -new \
+     -key "{{ key_path }}/{{ item.prefix }}-key.pem" \
+     -out "{{ csr_path }}/{{ item.prefix }}-csr.pem" \
+     -subj "/CN={{ ansible_fqdn }}"
+  args:
+    creates: "{{ cert_path }}/{{ item.prefix }}-crt.pem"
+  environment:
+    OPENSSL_CONF: "{{ ripple_solution_config_base }}/openssl-cert.cnf"
+  when: item.check
   with_items:
-   - "{{ key_stat.results }}"
-  when: not item.stat.exists
+   - "{{ cert_items }}"
 
-- name: "Sign CSR and Create Certificate"
-  command: openssl x509 -req -sha256 -days 9999 -in "{{ csr_path }}/{{ item.item }}-csr.pem" -CA "{{ ca_cert }}" -CAkey "{{ ca_key }}" -CAcreateserial -out "{{ cert_path }}/{{ item.item }}-crt.pem"
+- name: "Create Certificate from CSR"
+  shell: |
+    openssl x509 \
+      -sha256 -days 1826 \
+      -req  -in "{{ csr_path }}/{{ item.prefix }}-csr.pem" \
+      -CA "{{ ca_cert }}" \
+      -CAkey "{{ ca_key }}" \
+      -CAcreateserial \
+      -out "{{ cert_path }}/{{ item.prefix }}-crt.pem"
+  args:
+    creates: "{{ cert_path }}/{{ item.prefix }}-crt.pem"
+  environment:
+    OPENSSL_CONF: "{{ ripple_solution_config_base }}/openssl-cert.cnf"
+  when: item.check
   with_items:
-   - "{{ key_stat.results }}"
-  when: not item.stat.exists
+   - "{{ cert_items }}"
+
 
 #
 # Fingerprints
 #
 
-- name: "SHA-256 Fingerprints"
-  shell: openssl x509 -in "{{ cert_path }}/{{ item }}-crt.pem" -noout -fingerprint -sha256
+- name: "Certificate Fingerprints"
+  shell: |
+    openssl x509 \
+      -in "{{ cert_path }}/{{ item.prefix }}-crt.pem" \
+      -noout \
+      -fingerprint -sha256 | \
+      awk -F'=' '{ print $2 }' > {{ cert_path }}/{{ item.prefix }}.fpt
+  args:
+    creates: "{{ cert_path }}/{{ item.prefix }}.fpt"
+  when: item.check
   with_items:
    - "{{ cert_items }}"
-  register: fingerprints
+
 
 #
 # Key Pairs Creation
 #
 
+- set_fact:
+    secret_key_files:
+     - { name: mac_key,                   script: secret_key_generator.js,    check: "{{ ripple_connect_enabled | default(False) | bool }}" }
+     - { name: external_access_token_key, script: secret_key_generator.js,    check: "{{ ripple_connect_enabled | default(False) | bool }}" }
+     - { name: client_access_token_key,   script: secret_key_generator.js,    check: "{{ ripple_connect_enabled | default(False) | bool }}" }
+     - { name: ilp_key,                   script: secret_key_generator.js,    check: "{{ ripple_connect_enabled | default(False) | bool }}" }
+     - { name: CONNECTOR_QUOTE_HMAC_KEY,  script: secret_key_generator.js,    check: "{{ fx_connector_enabled | default(False) | bool }}" }
+     - { name: validator_key_pair,        script: ed25519_key_pair_generator, check: "{{ ilp_validator_enabled | default(False) | bool }}" }
+
 - name: "Secret Keys"
-  shell: "node /opt/ripple-solution/scripts/secret_key_generator.js > {{ pia_path }}/{{ item }}.pia"
+  shell: node /opt/ripple-solution/scripts/{{ item.script }} > {{ pia_path }}/{{ item.name }}.pia
   args:
-    creates: "{{ pia_path }}/{{ item }}.pia"
+    creates: "{{ pia_path }}/{{ item.name }}.pia"
+  when: item.check
   with_items:
-   - mac_key
-   - external_access_token_key
-   - client_access_token_key
-   - ilp_key
+   - "{{ secret_key_files }}"
 
-- name: "Connector Secrets"
-  shell: "node /opt/ripple-solution/scripts/secret_key_generator.js > {{ pia_path }}/{{ item }}.pia"
-  args:
-    creates: "{{ pia_path }}/{{ item }}.pia"
+
+#
+# Security and Permissions
+#
+
+- name: "Directories and Files Ownership"
+  file:
+    path:   "{{ item.path }}"
+    state:  directory
+    owner:  "{{ ripple_solution_user }}"
+    group:  "{{ ripple_solution_group }}"
+    seuser: system_u
+    serole: object_r
+    setype: usr_t
+    recurse: yes
   with_items:
-   - CONNECTOR_QUOTE_HMAC_KEY
-  when: fx_connector_enabled | bool
+   - "{{ crypto_directories }}"
 
-- name: "Validator Secrets"
-  shell: "node /opt/ripple-solution/scripts/ed25519_key_pair_generator.js > {{ pia_path }}/validator_key_pair.pia"
-  args:
-    creates: "{{ pia_path }}/validator_key_pair.pia"
-  when: ilp_validator_enabled | bool
+- name: "Root CA Key Permissions"
+  file: path="{{ ca_key }}" mode="0400"
+
+- name: "Other Keys Permissions"
+  file: path="{{ key_path }}/{{ item.prefix }}-key.pem" mode="0400"
+  when: item.check
+  with_items:
+   - "{{ cert_items }}"
+
+- name: "Secret Files Permissions"
+  file: path="{{ pia_path }}/{{ item.name }}.pia" mode="0400"
+  when: item.check
+  with_items:
+   - "{{ secret_key_files }}"

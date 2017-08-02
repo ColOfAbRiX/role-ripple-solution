@@ -1,0 +1,38 @@
+[req]
+default_bits           = 2048
+distinguished_name     = req_distinguished_name
+string_mask            = utf8only
+prompt                 = no
+default_days           = 1824
+default_md             = sha256
+
+[req_distinguished_name]
+commonName             = {{ ansible_fqdn }}
+organizationName       = {{ openssl_organizationName }}
+organizationalUnitName = {{ openssl_organizationalUnitName }}
+localityName           = {{ openssl_localityName }}
+stateOrProvinceName    = {{ openssl_stateOrProvinceName }}
+countryName            = {{ openssl_countryName }}
+emailAddress           = {{ openssl_emailAddress }}
+
+# We'll apply the usr_cert extension when signing client certificates, such as
+# those used for remote user authentication.
+[usr_cert]
+basicConstraints       = CA:false
+nsCertType             = client, email
+nsComment              = "OpenSSL Generated Client Certificate"
+subjectKeyIdentifier   = hash
+authorityKeyIdentifier = keyid,issuer
+keyUsage               = critical, nonRepudiation, digitalSignature, keyEncipherment
+extendedKeyUsage       = clientAuth, emailProtection
+
+# We'll apply the server_cert extension when signing server certificates, such
+# as those used for web servers.
+[server_cert]
+basicConstraints       = CA:false
+nsCertType             = server
+nsComment              = "OpenSSL Generated Server Certificate"
+subjectKeyIdentifier   = hash
+authorityKeyIdentifier = keyid,issuer:always
+keyUsage               = critical, digitalSignature, keyEncipherment
+extendedKeyUsage       = serverAuth

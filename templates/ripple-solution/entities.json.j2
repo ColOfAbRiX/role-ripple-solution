@@ -2,7 +2,7 @@
     "domain": "{{ ansible_fqdn }}:{{ ripple_connect_port }}",
 
     "known_remotes": [
-{% for item in ripple_connect_remotes %}
+{% for item in ripple_connect_partners %}
       {
         "domain": "{{ item.address }}"
       }{% if not loop.last %},{% endif %}
@@ -42,15 +42,15 @@
 {% for ledger in ilp_ledgers if ledger.install_local | default(False) | bool %}
       "{{ ledger.currency | upper }}": [{
         "address": "{{ ledger.host }}",
-        "account": "http{% if ledger.config.use_https | default(True) | bool %}s{% endif %}://{{ ledger.host }}:{{ ledger.port }}/account/transact"
+        "account": "http{% if ledger.config.use_https | default(True) | bool %}s{% endif %}://{{ ledger.host }}:{{ ledger.port }}/account/{{ ripple_connect_ledger_user }}"
       }]{% if ripple_connect_ledgers | default([]) %},{% endif %}
 
 {% endfor %}
 {% for ledger in ripple_connect_ledgers | default([]) %}
-      "{{ ledger.currency | upper }}": [
+      "{{ ledger.currency | upper }}": [{
         "address": "{{ ledger.address }}",
         "account": "{{ ledger.account }}"
-      ]{% if not loop.last %},{% endif %}
+      }]{% if not loop.last %},{% endif %}
 
 {% endfor %}
     },

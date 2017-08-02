@@ -18,70 +18,48 @@
     chdir:   "{{ knex_root }}"
     creates: "{{ knex_root }}/node_modules"
 
+
 - name: "Learn Schema Version"
   shell: "ls {{ ripple_solution_schema_base }}/*.sql | grep -Eo '[0-9]+\\.[0-9]+\\.[0-9]+' | sort | uniq"
   args:
     chdir: "{{ ripple_solution_schema_base }}"
+  changed_when: false
   register: schema_version
 
+- name: "Uniform SQL Script Version"
+  file:
+    src:  "{{ ripple_solution_schema_base }}/{{ item }}-{{ schema_version.stdout }}.sql"
+    dest: "{{ ripple_solution_schema_base }}/{{ item }}.sql"
+    state: link
+    force: yes
+  with_items:
+   - ripple-connect
+   - validator
+   - connector
+   - ledger
 
-- set_fact:
-    database_info:
-     - check_table:   db_schema_versions
-       connection:    "{{ ripple_solution_db_dialect }}://{{ ripple_connect_db_admin_user | default(omit) }}:{{ ripple_connect_db_admin_pass | default(omit) }}@{{ ripple_connect_db_host | default(omit) }}:{{ ripple_connect_db_port | default(omit) }}/{{ ripple_connect_db_name | default(omit) }}"
-       execute_file:  "{{ ripple_solution_schema_base }}/ripple-connect-{{ schema_version.stdout }}.sql"
-       service_check: "{{ ripple_connect_enabled | default(False) | bool }}"
-     - check_table:   n_db_schema_versions
-       connection:    "{{ ripple_solution_db_dialect }}://{{ ilp_validator_db_admin_user | default(omit) }}:{{ ilp_validator_db_admin_pass | default(omit) }}@{{ ilp_validator_db_host | default(omit) }}:{{ ilp_validator_db_port | default(omit) }}/{{ ilp_validator_db_name | default(omit) }}"
-       execute_file:  "{{ ripple_solution_schema_base }}/validator-{{ schema_version.stdout }}.sql"
-       service_check: "{{ ilp_validator_enabled | default(False) | bool }}"
-     - check_table:   c_db_schema_versions
-       connection:    "{{ ripple_solution_db_dialect }}://{{ fx_connector_db_admin_user | default(omit) }}:{{ fx_connector_db_admin_pass | default(omit) }}@{{ fx_connector_db_host | default(omit) }}:{{ fx_connector_db_port | default(omit) }}/{{ fx_connector_db_name | default(omit) }}"
-       execute_file:  "{{ ripple_solution_schema_base }}/connector-{{ schema_version.stdout }}.sql"
-       service_check: "{{ fx_connector_enabled | default(False) | bool }}"
 
-- name: "Check DB Present"
-  shell: "{{ knex_cmd }} <<< 'SELECT * FROM public.{{ item.check_table }};'"
+- name: "Check DB Initialized"
+  shell: "{{ knex_cmd }} <<< 'SELECT * FROM {{ item.db_check_table }};'"
   environment:
-    KNEXSQL_DB: "{{ item.connection }}"
+    KNEXSQL_DB: "{{ item.db_string }}"
   changed_when: false
   failed_when: false
   register: db_present
+  when: item.enabled
   with_items:
-   - "{{ database_info }}"
+   - "{{ ripple_solution_info }}"
 
-- name: "Create Database"
-  shell: "{{ knex_cmd }} < {{ item.1.execute_file }}"
+- name: "Initialize Database"
+  shell: "{{ knex_cmd }} < {{ ripple_solution_schema_base }}/{{ item.db_sql_file }}"
   environment:
-    KNEXSQL_DB: "{{ item.1.connection }}"
+    KNEXSQL_DB: "{{ item.1.db_string }}"
   register: result
   failed_when: "'Error' in result.stderr or
                 'error' in result.stderr or
                 'must be owner' in result.stderr"
-  when: "item.1.service_check and
-         'does not exist' in db_present.results[item.0].stderr"
-  with_indexed_items:
-   - "{{ database_info }}"
-
-
-- name: "Check Ledger Database"
-  shell: "{{ knex_cmd }} <<< 'SELECT * FROM public.l_db_schema_versions;'"
-  environment:
-    KNEXSQL_DB: "{{ ripple_solution_db_dialect }}://{{ item.db_admin_user }}:{{ item.db_admin_pass }}@{{ item.db_host }}:{{ item.db_port }}/{{ item.db_name }}"
-  changed_when: false
-  failed_when: false
-  register: ldg_db_present
-  with_items:
-   - "{{ ilp_ledgers }}"
-
-- name: "Create Ledger Databases"
-  shell: "{{ knex_cmd }} < {{ ripple_solution_schema_base }}/ledger-{{ schema_version.stdout }}.sql"
-  environment:
-    KNEXSQL_DB: "{{ ripple_solution_db_dialect }}://{{ item.1.db_admin_user }}:{{ item.1.db_admin_pass }}@{{ item.1.db_host }}:{{ item.1.db_port }}/{{ item.1.db_name }}"
-  register: result
-  failed_when: "'Error' in result.stderr or
-                'error' in result.stderr or
-                'must be owner' in result.stderr"
-  when: "'does not exist' in ldg_db_present.results[item.0].stderr"
-  with_indexed_items:
-   - "{{ ilp_ledgers }}"
+  when: "item.0.enabled and
+         'does not exist' in item.1.stderr"
+  with_together:
+   - "{{ ripple_solution_info }}"
+   - "{{ db_present.results }}"

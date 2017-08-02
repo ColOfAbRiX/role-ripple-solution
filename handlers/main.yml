@@ -1,2 +1,5 @@
 ---
 # handlers file for ripple-solution
+
+- name: "Restart Ripple Solution"
+  service: name=riplple-solution state=restarted

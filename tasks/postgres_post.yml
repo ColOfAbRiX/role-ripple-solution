@@ -1,32 +1,19 @@
 ---
 
-- name: "Grant Users Privileges to Schema"
+- name: "Grant User Privileges"
+  no_log: true
   postgresql_privs:
-    login_host:      "{{ item.db_host }}"
-    login_user:      "{{ item.db_admin_user }}"
-    login_password:  "{{ item.db_admin_pass }}"
-    port:            "{{ item.db_port }}"
-    db:              "{{ item.db_name }}"
-    role:            "{{ item.db_user }}"
-    type:            schema
-    priv:            USAGE
-    objs:            public
-  when: item.enabled | default(False) | bool
-  with_items:
-   - "{{ db_info }}"
-
-- name: "Grant Users Privileges to Tables"
-  postgresql_privs:
-    login_host:      "{{ item.db_host }}"
-    login_user:      "{{ item.db_admin_user }}"
-    login_password:  "{{ item.db_admin_pass }}"
-    port:            "{{ item.db_port }}"
-    db:              "{{ item.db_name }}"
-    role:            "{{ item.db_user }}"
-    schema:          public
-    type:            table
-    priv:            SELECT,UPDATE,INSERT,DELETE
-    objs:            ALL_IN_SCHEMA
-  when: item.enabled | default(False) | bool
-  with_items:
-   - "{{ db_info }}"
+    login_host:      "{{ item.0.db_host }}"
+    login_user:      "{{ item.0.db_admin_user }}"
+    login_password:  "{{ item.0.db_admin_pass }}"
+    port:            "{{ item.0.db_port }}"
+    db:              "{{ item.0.db_name }}"
+    role:            "{{ item.0.db_user }}"
+    type:            "{{ item.1.type }}"
+    schema:          "{{ item.1.schema | default(omit) }}"
+    priv:            "{{ item.1.priv }}"
+    objs:            "{{ item.1.objs }}"
+  when: item.0.enabled | default(False) | bool
+  with_nested:
+   - "{{ ripple_solution_info }}"
+   - "{{ ripple_solution_db_user_privileges }}"

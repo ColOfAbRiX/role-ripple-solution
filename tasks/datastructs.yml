@@ -1,0 +1,79 @@
+---
+
+- name: "Aggregate Data"
+  set_fact:
+    ripple_connect_info_tmp:
+      enabled:        "{{ ripple_connect_enabled }}"
+      port:           "{{ ripple_connect_port }}"
+      host:           "{{ ripple_connect_host }}"
+      secure:         "{{ ripple_connect_secure }}"
+      db_host:        "{{ ripple_connect_db_host }}"
+      db_port:        "{{ ripple_connect_db_port }}"
+      db_user:        "{{ ripple_connect_db_user }}"
+      db_pass:        "{{ ripple_connect_db_pass }}"
+      db_name:        "{{ ripple_connect_db_name }}"
+      db_admin_user:  "{{ ripple_connect_db_admin_user }}"
+      db_admin_pass:  "{{ ripple_connect_db_admin_pass }}"
+      db_sql_file:    ripple-connects.sql
+      db_check_table: public.db_schema_versions
+      config:         "{{ ripple_connect_config }}"
+      crt_prefix:     "{{ ripple_connect_crt_prefix }}"
+
+    ilp_validator_info_tmp:
+      enabled:        "{{ ilp_validator_enabled }}"
+      port:           "{{ ilp_validator_port }}"
+      host:           "{{ ilp_validator_host }}"
+      db_host:        "{{ ilp_validator_db_host }}"
+      db_port:        "{{ ilp_validator_db_port }}"
+      db_user:        "{{ ilp_validator_db_user }}"
+      db_pass:        "{{ ilp_validator_db_pass }}"
+      db_name:        "{{ ilp_validator_db_name }}"
+      db_admin_user:  "{{ ilp_validator_db_admin_user }}"
+      db_admin_pass:  "{{ ilp_validator_db_admin_pass }}"
+      db_sql_file:    validator.sql
+      db_check_table: public.n_db_schema_versions
+      config:         "{{ ilp_validator_config }}"
+      crt_prefix:     "{{ validator_crt_prefix }}"
+
+    fx_connector_info_tmp:
+      enabled:        "{{ fx_connector_enabled }}"
+      port:           "{{ fx_connector_port }}"
+      host:           "{{ fx_connector_host }}"
+      db_host:        "{{ fx_connector_db_host }}"
+      db_port:        "{{ fx_connector_db_port }}"
+      db_user:        "{{ fx_connector_db_user }}"
+      db_pass:        "{{ fx_connector_db_pass }}"
+      db_name:        "{{ fx_connector_db_name }}"
+      db_admin_user:  "{{ fx_connector_db_admin_user }}"
+      db_admin_pass:  "{{ fx_connector_db_admin_pass }}"
+      db_sql_file:    connector.sql
+      db_check_table: public.c_db_schema_versions
+      config:         "{{ fx_connector_config }}"
+      crt_prefix:     "{{ fx_connector_crt_prefix }}"
+
+    ilp_ledgers_extra_vars:
+      db_sql_file:    ledger.sql
+      db_check_table: public.l_db_schema_versions
+
+- name: "Build Temporary Datastructures"
+  set_fact:
+    ripple_connect_info: "{{ ripple_connect_info_tmp | build_ripple_extra(ripple_solution_db_dialect) }}"
+    ilp_validator_info:  "{{ ilp_validator_info_tmp | build_ripple_extra(ripple_solution_db_dialect) }}"
+    fx_connector_info:   "{{ fx_connector_info_tmp | build_ripple_extra(ripple_solution_db_dialect) }}"
+    ilp_ledgers_info:    "{{ ilp_ledgers | map('build_ripple_extra', ripple_solution_db_dialect, ilp_ledgers_extra_vars) | list }}"
+
+- name: "Build Final Datastructure"
+  set_fact:
+    ripple_solution_info: "{{ ([ripple_connect_info, ilp_validator_info, fx_connector_info] + ilp_ledgers_info) | list }}"
+    ripple_solution_db_user_privileges:
+     - type: schema
+       priv: USAGE
+       objs: public
+     - schema: public
+       type: table
+       priv: SELECT,UPDATE,INSERT,DELETE
+       objs: ALL_IN_SCHEMA
+     - schema: public
+       type: sequence
+       priv: USAGE,SELECT
+       objs: ALL_IN_SCHEMA

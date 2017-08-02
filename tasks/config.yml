@@ -5,13 +5,15 @@
 #
 
 - name: "Encrypt Known Remotes Passwords"
-  shell: "node /opt/ripple-solution/scripts/encrypt_string.js {{ key_path }}/{{ ripple_solution_admin_crt_prefix }}-key.pem <<< '{{ item.password }}'"
+  shell: node /opt/ripple-solution/scripts/encrypt_string.js {{ key_path }}/{{ ripple_solution_admin_crt_prefix }}-key.pem <<< '{{ item.password }}'
+  changed_when: false
   register: encrypted_known_remote_passwords
   with_items:
-   - "{{ ripple_connect_remotes }}"
+   - "{{ ripple_connect_partners }}"
 
 - name: "Encrypt Database Passwords"
-  shell: "node /opt/ripple-solution/scripts/encrypt_string.js {{ key_path }}/{{ ripple_solution_admin_crt_prefix }}-key.pem <<< '{{ ripple_connect_db_pass }}'"
+  shell: node /opt/ripple-solution/scripts/encrypt_string.js {{ key_path }}/{{ ripple_solution_admin_crt_prefix }}-key.pem <<< '{{ ripple_connect_db_pass }}'
+  changed_when: false
   register: encrypted_database_password
 
 #
@@ -19,34 +21,38 @@
 #
 
 - name: "Hash Operator Passwords"
-  shell: "node /opt/ripple-solution/scripts/hash_password.js <<< '{{ item.username }}:RippleSolution:{{ item.password }}'"
+  shell: node /opt/ripple-solution/scripts/hash_password.js <<< '{{ item.username }}:RippleSolution:{{ item.password }}'
+  changed_when: false
   register: hashed_operator_passwords
   with_items:
    - "{{ ripple_connect_users | selectattr('type', 'equalto', 'operator') | list }}"
 
 - name: "Hash Monitor Passwords"
-  shell: "node /opt/ripple-solution/scripts/hash_password.js <<< '{{ item.username }}:RippleSolution:{{ item.password }}'"
+  shell: node /opt/ripple-solution/scripts/hash_password.js <<< '{{ item.username }}:RippleSolution:{{ item.password }}'
+  changed_when: false
   register: hashed_monitor_passwords
   with_items:
    - "{{ ripple_connect_users | selectattr('type', 'equalto', 'monitor') | list }}"
 
 - name: "Hash Custom Rate Operator Passwords"
-  shell: "node /opt/ripple-solution/scripts/hash_password.js <<< '{{ item.username }}:RippleSolution:{{ item.password }}'"
+  shell: node /opt/ripple-solution/scripts/hash_password.js <<< '{{ item.username }}:RippleSolution:{{ item.password }}'
+  changed_when: false
   register: hashed_custom_rate_operator_passwords
   with_items:
    - "{{ ripple_connect_users | selectattr('type', 'equalto', 'custom_rate_operator') | list }}"
 
 - name: "Hash Partner Passwords"
-  shell: "node /opt/ripple-solution/scripts/hash_password.js <<< '{{ item.username }}:RippleSolution:{{ item.password }}'"
+  shell: node /opt/ripple-solution/scripts/hash_password.js <<< '{{ item.username }}:RippleSolution:{{ item.password }}'
+  changed_when: false
   register: hashed_partner_passwords
   with_items:
-   - "{{ ripple_connect_remotes | sum(attribute='users', start=[]) | list }}"
+   - "{{ ripple_connect_partners | sum(attribute='partner_users', start=[]) | list }}"
 
 #
-# Read Key Pairs
+# Read Key Pairs and Fingerprints
 #
 
-- name: "Read Secret Keys"
+- name: "Read Ripple Connect Secrets"
   shell: "cat {{ pia_path }}/{{ item }}.pia"
   register: ripple_connect_secrets
   changed_when: false
@@ -64,11 +70,19 @@
    - CONNECTOR_QUOTE_HMAC_KEY
   when: fx_connector_enabled | bool
 
-- name: "Read Secrets"
+- name: "Read Validator Secrets"
   shell: "cat {{ pia_path }}/validator_key_pair.pia"
   changed_when: false
   register: validator_key
   when: ilp_validator_enabled | bool
+
+- name: "Read Fingerprints"
+  shell: "cat {{ cert_path }}/{{ item.prefix }}.fpt"
+  changed_when: false
+  when: item.check
+  with_items:
+   - "{{ cert_items }}"
+  register: fingerprints
 
 #
 # Configuration files
@@ -93,8 +107,7 @@
       server_key_path:         "{{ key_path }}/{{ ripple_connect_crt_prefix }}-key.pem"
       server_certificate_path: "{{ cert_path }}/{{ ripple_connect_crt_prefix }}-crt.pem"
       server_ca_paths:
-       - "{{ cert_path }}/provider-ca-crt.pem"
-       - "{{ cert_path }}/consumer-ca-crt.pem"
+       - "{{ ca_cert }}"
 
     config_file: "{{ ripple_connect_config }}"
 
@@ -106,7 +119,7 @@
         users:  "{{ ripple_connect_users | selectattr('type', 'equalto', 'monitor') | list }}"
         hashes: "{{ hashed_monitor_passwords }}"
       partner:
-        users:  "{{ ripple_connect_remotes | sum(attribute='users', start=[]) | list }}"
+        users:  "{{ ripple_connect_partners | sum(attribute='partner_users', start=[]) | list }}"
         hashes: "{{ hashed_partner_passwords }}"
       custom_rate_operator:
         users:  "{{ ripple_connect_users | selectattr('type', 'equalto', 'custom_rate_operator') | list }}"
@@ -118,7 +131,7 @@
 
 - name: "Install Configuration Files"
   template:
-    src:    "{{ item }}.j2"
+    src:    "ripple-solution/{{ item }}.j2"
     dest:   "{{ ripple_solution_config_base }}/{{ item }}"
     mode:   '0644'
     force:  yes
@@ -127,6 +140,8 @@
     seuser: system_u
     serole: object_r
     setype: usr_t
+  # notify:
+  #  - "Restart Ripple Solution"
   with_items:
    - config-ilp.json
    - config.json
