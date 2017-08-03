@@ -1,7 +1,6 @@
 ---
 
 - name: "Grant User Privileges"
-  no_log: true
   postgresql_privs:
     login_host:      "{{ item.0.db_host }}"
     login_user:      "{{ item.0.db_admin_user }}"

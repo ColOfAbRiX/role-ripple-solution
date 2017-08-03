@@ -3,10 +3,9 @@
 - name: "Aggregate Data"
   set_fact:
     ripple_connect_info_tmp:
-      enabled:        "{{ ripple_connect_enabled }}"
+      enabled:        "{{ ripple_connect_enabled | default(False) | bool }}"
       port:           "{{ ripple_connect_port }}"
       host:           "{{ ripple_connect_host }}"
-      secure:         "{{ ripple_connect_secure }}"
       db_host:        "{{ ripple_connect_db_host }}"
       db_port:        "{{ ripple_connect_db_port }}"
       db_user:        "{{ ripple_connect_db_user }}"
@@ -14,13 +13,13 @@
       db_name:        "{{ ripple_connect_db_name }}"
       db_admin_user:  "{{ ripple_connect_db_admin_user }}"
       db_admin_pass:  "{{ ripple_connect_db_admin_pass }}"
-      db_sql_file:    ripple-connects.sql
+      db_sql_file:    ripple-connect.sql
       db_check_table: public.db_schema_versions
       config:         "{{ ripple_connect_config }}"
       crt_prefix:     "{{ ripple_connect_crt_prefix }}"
 
     ilp_validator_info_tmp:
-      enabled:        "{{ ilp_validator_enabled }}"
+      enabled:        "{{ ilp_validator_enabled | default(False) | bool }}"
       port:           "{{ ilp_validator_port }}"
       host:           "{{ ilp_validator_host }}"
       db_host:        "{{ ilp_validator_db_host }}"
@@ -36,7 +35,7 @@
       crt_prefix:     "{{ validator_crt_prefix }}"
 
     fx_connector_info_tmp:
-      enabled:        "{{ fx_connector_enabled }}"
+      enabled:        "{{ fx_connector_enabled | default(False) | bool }}"
       port:           "{{ fx_connector_port }}"
       host:           "{{ fx_connector_host }}"
       db_host:        "{{ fx_connector_db_host }}"
@@ -77,3 +76,18 @@
        type: sequence
        priv: USAGE,SELECT
        objs: ALL_IN_SCHEMA
+
+- name: "Crypto Paths"
+  set_fact:
+    cert_path: "{{ ripple_solution_cert_base }}/crt"
+    key_path:  "{{ ripple_solution_cert_base }}/key"
+    csr_path:  "{{ ripple_solution_cert_base }}/csr"
+    pia_path:  "{{ ripple_solution_cert_base }}/pia"
+    cert_ext_path: "{{ ripple_solution_cert_base }}/remotes"
+
+- name: "Common Certificates Name"
+  set_fact:
+    ca_cert:    "{{ cert_path }}/{{ ripple_solution_ca_prefix }}.crt"
+    ca_key:     "{{ key_path }}/{{ ripple_solution_ca_prefix }}.key"
+    admin_cert: "{{ cert_path }}/{{ ripple_solution_admin_crt_prefix }}-crt.pem"
+    admin_key:  "{{ key_path }}/{{ ripple_solution_admin_crt_prefix }}-key.pem"

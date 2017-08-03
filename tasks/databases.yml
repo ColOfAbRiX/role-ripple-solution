@@ -42,7 +42,7 @@
 - name: "Check DB Initialized"
   shell: "{{ knex_cmd }} <<< 'SELECT * FROM {{ item.db_check_table }};'"
   environment:
-    KNEXSQL_DB: "{{ item.db_string }}"
+    KNEXSQL_DB: "{{ item.db_admin_string }}"
   changed_when: false
   failed_when: false
   register: db_present
@@ -51,9 +51,9 @@
    - "{{ ripple_solution_info }}"
 
 - name: "Initialize Database"
-  shell: "{{ knex_cmd }} < {{ ripple_solution_schema_base }}/{{ item.db_sql_file }}"
+  shell: "{{ knex_cmd }} < {{ ripple_solution_schema_base }}/{{ item.0.db_sql_file }}"
   environment:
-    KNEXSQL_DB: "{{ item.1.db_string }}"
+    KNEXSQL_DB: "{{ item.0.db_admin_string }}"
   register: result
   failed_when: "'Error' in result.stderr or
                 'error' in result.stderr or

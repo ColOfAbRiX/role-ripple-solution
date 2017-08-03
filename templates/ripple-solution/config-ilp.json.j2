@@ -4,15 +4,15 @@
     "RC_CONFIGS_PATH": "{{ ripple_solution_config_base }}",
     "RC_SECRETS_ENCRYPTED": {{ ripple_connect_secrets_encrypted }},
     "RC_ENABLE_UI": {{ ripple_connect_enable_ui }}
-  }{% if ilp_ledgers | default([]) or ilp_validator_enabled | default(False) | bool or fx_connector_enabled | default(False) | bool %},{% endif %}
+  }{% if ilp_ledgers_info | default([]) or ilp_validator_info.enabled or fx_connector_info.enabled %},{% endif %}
 
 
 {% endif %}
-{% for ledger in ilp_ledgers %}
+{% for ledger in ilp_ledgers_info %}
   "ledger{{ loop.index0 }}": {
     "LEDGER_HOSTNAME": "{{ ledger.host }}",
     "LEDGER_PORT": {{ ledger.port }},
-    "LEDGER_DB_URI": "{{ ripple_solution_db_dialect }}://{{ ledger.db_user }}:{{ ledger.db_pass }}@{{ ledger.db_host }}:{{ ledger.db_port }}/{{ ledger.db_name }}",
+    "LEDGER_DB_URI": "{{ ledger.db_string }}",
     "LEDGER_TLS_KEY": "{{ key_path }}/{{ ledger_crt_prefix }}-key.pem",
     "LEDGER_TLS_CERTIFICATE": "{{ cert_path }}/{{ ledger_crt_prefix }}-crt.pem",
     "LEDGER_ADMIN_FINGERPRINT": "{{ fingerprints.results[admin_crt_idx].stdout }}",
@@ -26,7 +26,7 @@
 {% endfor %}
       "{{ ca_cert }}"
     ]
-  }{% if not loop.last or ilp_validator_enabled | default(False) | bool or fx_connector_enabled | default(False) | bool %},{% endif %}
+  }{% if not loop.last or ilp_validator_info.enabled or fx_connector_info.enabled %},{% endif %}
 
 
 {% endfor %}
@@ -34,7 +34,7 @@
   "validator": {
     "VALIDATOR_HOSTNAME": "{{ ilp_validator_host }}",
     "VALIDATOR_PORT": {{ ilp_validator_port }},
-    "VALIDATOR_DB_URI": "{{ ripple_solution_db_dialect }}://{{ ilp_validator_db_user }}:{{ ilp_validator_db_pass }}@{{ ilp_validator_db_host }}:{{ ilp_validator_db_port }}/{{ ilp_validator_db_name }}",
+    "VALIDATOR_DB_URI": "{{ ilp_validator_info.db_string }}",
 {% for key, value in (ilp_validator_config | default({})).iteritems() %}
     "VALIDATOR_{{ key | upper }}": "{{ value }}",
 {% endfor %}
@@ -48,14 +48,14 @@
 {% endfor %}
       "{{ ca_cert }}"
     ]
-  }{% if fx_connector_enabled | default(False) | bool %},{% endif %}
+  }{% if fx_connector_info.enabled %},{% endif %}
 
 
 {% endif %}
 {% if fx_connector_enabled | default(False) | bool %}
   "connector": {
     "CONNECTOR_PORT": {{ fx_connector_port }},
-    "CONNECTOR_DB_URI": "{{ ripple_solution_db_dialect }}://{{ fx_connector_db_user }}:{{ fx_connector_db_pass }}@{{ fx_connector_db_host }}:{{ fx_connector_db_port }}/{{ fx_connector_db_name }}",
+    "CONNECTOR_DB_URI": "{{ fx_connector_info.db_string }}",
     "CONNECTOR_TLS_KEY": "{{ key_path }}/{{ fx_connector_crt_prefix }}-key.pem",
     "CONNECTOR_TLS_CERTIFICATE": "{{ cert_path }}/{{ fx_connector_crt_prefix }}-crt.pem",
     "CONNECTOR_ADMIN_FINGERPRINT": "{{ fingerprints.results[admin_crt_idx].stdout }}",
@@ -72,8 +72,8 @@
       "{{ ca_cert }}"
     ],
     "CONNECTOR_LEDGER_CREDENTIALS": {
-{% for ledger in ilp_ledgers | default([]) %}
-      "{% if ledger.config.auth_client_cert_enabled | default(False) | bool %}https{% else %}http{% endif %}://{{ ledger.host }}:{{ ledger.port }}/account/{{ fx_connector_ledger_user }}": {
+{% for ledger in ilp_ledgers_info | default([]) %}
+      "{{ ledger.url }}/account/{{ fx_connector_ledger_user }}": {
         "authorized_access_fingerprints": [
           "{{ fingerprints.results[ripple_connect_crt_idx].stdout }}"
         ],

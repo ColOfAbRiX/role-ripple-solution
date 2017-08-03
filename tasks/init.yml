@@ -1,7 +1,7 @@
 ---
 
-# - name: "Start Ripple Solution"
-#   service: name=riplple-solution state=started enabled=yes
+- name: "Start Ripple Solution"
+  command: service ripple-solution start
 
 - name: "Wait for all Services"
   wait_for:
@@ -12,82 +12,50 @@
   with_items:
    - "{{ ripple_solution_info }}"
 
-- name: "Transactional Account on Local Ledgers"
-  shell: |
-    {{ ripple_solution_base }}/scripts/rs_requests.sh \
-        "{{ item.url }}/account" \
-        --cert {{ cert_path }}/{{ ripple_solution_admin_crt_prefix }}-crt.pem \
-        --key {{ key_path }}/{{ ripple_solution_admin_crt_prefix }}-key.pem \
-        --ca {{ ca_cert }} \
-        --method PUT \
-        --body "{ \"name\": \"{{ ripple_connect_ledger_user }}\", \"minimum_allowed_balance\": \"-1000000\", \"fingerprint\": \"{{ fingerprints.results[ripple_connect_crt_idx].stdout }}\", \"notification_url\": \"{{ ripple_connect_info.url }}/ledger/notifications\" }"
+- name: "Check Transactional Accounts on Local Ledgers"
+  shell: "{{ ripple_solution_base }}/scripts/rs_requests.sh {{ item.url }}/account/{{ ripple_connect_ledger_user }} --method GET --cert {{ admin_cert }} --key {{ admin_key }} --ca {{ ca_cert }}"
+  changed_when: false
+  failed_when: transact_accounts | failed and
+               'Account does not exist' not in transact_accounts.stderr
   when: item.enabled | default(False) | bool and
         item.install_local | default(False) | bool
+  register: transact_accounts
+  with_items:
+   - "{{ ilp_ledgers_info }}"
+
+- name: "Transactional Account on Local Ledgers"
+  shell: |
+    {{ ripple_solution_base }}/scripts/rs_requests.sh "{{ item.0.url }}/account" \
+        --method PUT \
+        --cert {{ admin_cert }} --key {{ admin_key }} --ca {{ ca_cert }} \
+        --body "{ \"name\": \"{{ ripple_connect_ledger_user }}\", \"minimum_allowed_balance\": \"-1000000\", \"fingerprint\": \"{{ fingerprints.results[ripple_connect_crt_idx].stdout }}\", \"notification_url\": \"{{ ripple_connect_info.url }}/ledger/notifications\" }"
+  when: item.0.enabled | default(False) | bool and
+        item.0.install_local | default(False) | bool and
+        '200' not in item.1.stdout
+  with_together:
+   - "{{ ilp_ledgers_info }}"
+   - "{{ transact_accounts.results }}"
+
+- name: "Check Connector Accounts on Local Ledgers"
+  shell: "{{ ripple_solution_base }}/scripts/rs_requests.sh {{ item.url }}/account/{{ fx_connector_ledger_user }} --method GET --cert {{ admin_cert }} --key {{ admin_key }} --ca {{ ca_cert }}"
+  changed_when: false
+  failed_when: connector_accounts | failed and
+               'Account does not exist' not in connector_accounts.stderr
+  when: item.enabled | default(False) | bool and
+        item.install_local | default(False) | bool
+  register: connector_accounts
   with_items:
    - "{{ ilp_ledgers_info }}"
 
 - name: "Connector Account on Local Ledgers"
   shell: |
-    {{ ripple_solution_base }}/scripts/rs_requests.sh \
-        "{{ item.url }}/account" \
-        --cert {{ cert_path }}/{{ ripple_solution_admin_crt_prefix }}-crt.pem \
-        --key {{ key_path }}/{{ ripple_solution_admin_crt_prefix }}-key.pem \
-        --ca {{ ca_cert }} \
+    {{ ripple_solution_base }}/scripts/rs_requests.sh "{{ item.0.url }}/account" \
         --method PUT \
+        --cert {{ admin_cert }} --key {{ admin_key }} --ca {{ ca_cert }} \
         --body "{ \"name\": \"{{ fx_connector_ledger_user }}\", \"minimum_allowed_balance\": \"-1000000\", \"fingerprint\": \"{{ fingerprints.results[fx_connector_crt_idx].stdout }}\", \"notification_url\": \"{{ fx_connector_info.url }}/notification\" }"
-  when: item.enabled | default(False) | bool and
-        item.install_local | default(False) | bool
-  with_items:
+  when: item.0.enabled | default(False) | bool and
+        item.0.install_local | default(False) | bool and
+        '200' not in item.1.stdout
+  with_together:
    - "{{ ilp_ledgers_info }}"
-
-# # Ledger on the provider
-
-# # This "transact" account is used by Ripple Connect on amdevripple01, so I have to authorize the RC certificate and I have to
-# # use the RC notification URL
-# bash /opt/ripple-solution/scripts/rs_requests.sh \
-#     https://amdevripple01.earthport.com:6000/account \
-#     --cert /opt/ripple-solution/config/crypto/crt/amdevripple01-admin-crt.pem \
-#     --key /opt/ripple-solution/config/crypto/key/amdevripple01-admin-key.pem \
-#     --ca /opt/ripple-solution/config/crypto/crt/amdevripple01-ca.crt \
-#     --method PUT \
-#     --body "{ \"name\":\"transact\", \"minimum_allowed_balance\":\"-1000000\",\"fingerprint\":\"ED:0E:D5:01:ED:C0:5E:D5:D3:5D:AB:79:A7:55:00:7F:DE:68:1C:37:E9:BD:6B:42:43:EC:D6:4E:79:F6:3F:4A\", \"notification_url\": \"https://amdevripple01.earthport.com:5000/ledger/notifications\" }"
-
-# # This "connector" account is used by the FX Connector, so I have to authorize the FXC certificate and I have to
-# # use the FXConnector notification URL
-# bash /opt/ripple-solution/scripts/rs_requests.sh \
-#     https://amdevripple01.earthport.com:6000/account \
-#     --cert /opt/ripple-solution/config/crypto/crt/amdevripple01-admin-crt.pem \
-#     --key /opt/ripple-solution/config/crypto/key/amdevripple01-admin-key.pem \
-#     --ca /opt/ripple-solution/config/crypto/crt/amdevripple01-ca.crt \
-#     --method PUT \
-#     --body "{ \"name\":\"connector\", \"minimum_allowed_balance\":\"-1000000\",\"fingerprint\":\"CA:0B:94:0E:8A:AB:D9:83:D5:A1:69:79:2E:2E:3D:F2:59:A6:38:3E:40:46:15:22:EB:70:ED:FC:EE:32:51:34\", \"notification_url\": \"https://amdevripple01.earthport.com:3000/notification\" }"
-
-# # I set an initial rate on the FX Connector
-# bash /opt/ripple-solution/scripts/rs_requests.sh https://amdevripple01.earthport.com:3000/rate/EUR/EUR/1.0\?type\=buy \
-#     --cert /opt/ripple-solution/config/crypto/crt/amdevripple01-admin-crt.pem \
-#     --key /opt/ripple-solution/config/crypto/key/amdevripple01-admin-key.pem \
-#     --ca /opt/ripple-solution/config/crypto/crt/amdevripple01-ca.crt \
-#     --method PUT
-
-# # Ledger on the consumer
-
-# # This "transact" account is used by Ripple Connect on amdevripple02, so I have to authorize the RC certificate and I have to
-# # use the RC notification URL
-# bash /opt/ripple-solution/scripts/rs_requests.sh \
-#     https://amdevripple02.earthport.com:6000/account \
-#     --cert /opt/ripple-solution/config/crypto/crt/amdevripple02-admin-crt.pem \
-#     --key /opt/ripple-solution/config/crypto/key/amdevripple02-admin-key.pem \
-#     --ca /opt/ripple-solution/config/crypto/crt/amdevripple02-ca.crt \
-#     --method PUT \
-#     --body "{ \"name\":\"transact\", \"minimum_allowed_balance\":\"-1000000\",\"fingerprint\":\"2D:19:B9:EC:75:1A:89:83:44:C2:76:18:31:69:F9:75:6A:C2:4B:2E:2B:D2:C4:FB:F5:9F:E6:1B:80:4C:22:54\", \"notification_url\": \"https://amdevripple02.earthport.com:5000/ledger/notifications\" }"
-
-# # This "connector" account is used by the FX Connector, so I have to authorize the FXC certificate and I have to
-# # use the FXConnector notification URL
-# bash /opt/ripple-solution/scripts/rs_requests.sh \
-#     https://amdevripple02.earthport.com:6000/account \
-#     --cert /opt/ripple-solution/config/crypto/crt/amdevripple02-admin-crt.pem \
-#     --key /opt/ripple-solution/config/crypto/key/amdevripple02-admin-key.pem \
-#     --ca /opt/ripple-solution/config/crypto/crt/amdevripple02-ca.crt \
-#     --method PUT \
-#     --body "{ \"name\":\"connector\", \"minimum_allowed_balance\":\"-1000000\",\"fingerprint\":\"CA:0B:94:0E:8A:AB:D9:83:D5:A1:69:79:2E:2E:3D:F2:59:A6:38:3E:40:46:15:22:EB:70:ED:FC:EE:32:51:34\", \"notification_url\": \"https://amdevripple01.earthport.com:3000/notification\" }"
-
+   - "{{ transact_accounts.results }}"

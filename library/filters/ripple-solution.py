@@ -4,6 +4,8 @@
 # Fabrizio Colonna <colofabrix@tin.it> - 02/09/2016
 #
 
+import six
+from distutils.util import strtobool
 
 def build_ripple_extra(value, rdbms='postgres', extra_vars={}):
     """
@@ -13,7 +15,10 @@ def build_ripple_extra(value, rdbms='postgres', extra_vars={}):
     # Service URL
     default_port = 80
     service_protocol = "http"
-    if value.get('config', {}).get('use_https', False):
+    use_https = value.get('config', {}).get('use_https', False)
+    if isinstance(use_https, six.string_types):
+        use_https = bool(strtobool(str(use_https.lower())))
+    if use_https:
         service_protocol += "s"
         default_port = 443
 
@@ -35,6 +40,17 @@ def build_ripple_extra(value, rdbms='postgres', extra_vars={}):
         value['db_name']
     )
     value['db_string'] = db_string
+
+    # DB administrator string
+    db_admin_string = "%s://%s:%s@%s:%s/%s" % (
+        rdbms,
+        value['db_admin_user'],
+        value['db_admin_pass'],
+        value['db_host'],
+        value['db_port'],
+        value['db_name']
+    )
+    value['db_admin_string'] = db_admin_string
 
     # SSL certs names
     value['crt_file'] = "%s-crt.pem" % value['crt_prefix']

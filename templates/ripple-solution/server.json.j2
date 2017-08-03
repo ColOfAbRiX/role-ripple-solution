@@ -1,1 +1,13 @@
-{{ server_file | to_nice_json }}
+{
+  "secure": "{{ ripple_connect_config.use_https | default(False) }}"
+  "port": "{{ ripple_connect_port | string }}"
+  "host": "{{ ripple_connect_host }}"
+  "server_key_path": "{{ key_path }}/{{ ripple_connect_info.key_file }}"
+  "server_certificate_path": "{{ cert_path }}/{{ ripple_connect_info.crt_file }}"
+  "server_ca_paths": {
+{% for cert in ripple_connect_trusted_external_certs %}
+    "{{ cert_ext_path }}/{{ cert }}",
+{% endfor %}
+    "{{ ca_cert }}"
+  }
+}

@@ -1,15 +1,6 @@
 ---
 
 - set_fact:
-    cert_path: "{{ ripple_solution_cert_base }}/crt"
-    key_path:  "{{ ripple_solution_cert_base }}/key"
-    csr_path:  "{{ ripple_solution_cert_base }}/csr"
-    pia_path:  "{{ ripple_solution_cert_base }}/pia"
-    cert_ext_path: "{{ ripple_solution_cert_base }}/remotes"
-
-- set_fact:
-    ca_cert:   "{{ cert_path }}/{{ ripple_solution_ca_prefix }}.crt"
-    ca_key:    "{{ key_path }}/{{ ripple_solution_ca_prefix }}.key"
     crypto_directories:
      - { path: "{{ ripple_solution_cert_base }}", mode: '0755' }
      - { path: "{{ cert_ext_path }}",  mode: '0755' }
@@ -18,14 +9,14 @@
      - { path: "{{ csr_path }}",  mode: '0750' }
      - { path: "{{ pia_path }}",  mode: '0750' }
 
+- name: "Reset Crypto Directories"
+  file: path="{{ ripple_solution_cert_base }}" state=absent
+  when: ripple_solution_reset | default(False) | bool
+
 - name: "Create Crypto Directories"
   file: path="{{ item.path }}" state=directory mode="{{ item.mode }}"
   with_items:
    - "{{ crypto_directories }}"
-
-#
-# Root CA Certificate
-#
 
 - name: "OpenSSL Configuration"
   template:
@@ -41,6 +32,37 @@
    - openssl-host_ca.cnf
    - openssl-cert.cnf
 
+- name: "Copy Existing Certificates"
+  copy:
+    src:    "{{ item }}"
+    dest:   "{{ cert_path }}/{{ item | basename }}"
+    mode:   '0644'
+    owner:  "{{ ripple_solution_user }}"
+    group:  "{{ ripple_solution_group }}"
+    seuser: system_u
+    serole: object_r
+    setype: usr_t
+  with_items:
+   - "{{ ripple_solution_use_certs }}"
+
+- name: "Copy Existing Keys"
+  copy:
+    src:    "{{ item }}"
+    dest:   "{{ key_path }}/{{ item | basename }}"
+    mode:   '0400'
+    owner:  "{{ ripple_solution_user }}"
+    group:  "{{ ripple_solution_group }}"
+    seuser: system_u
+    serole: object_r
+    setype: usr_t
+  with_items:
+   - "{{ ripple_solution_use_keys }}"
+
+
+#
+# Root CA Certificate
+#
+
 - name: "Create Certification Authority Certificate"
   shell: |
     openssl req \
@@ -51,6 +73,16 @@
     creates: "{{ ca_cert }}"
   environment:
     OPENSSL_CONF: "{{ ripple_solution_config_base }}/openssl-host_ca.cnf"
+  register: new_root_ca_status
+
+- name: "Reset Existing Certificates"
+  file: path="{{ item.1.path }}/{{ item.0.prefix }}{{ item.1.postfix }}" state=absent
+  when: new_root_ca_status | changed
+  with_nested:
+   - "{{ cert_items }}"
+   - - { path: "{{ key_path }}",  postfix: '-key.pem' }
+     - { path: "{{ cert_path }}", postfix: '-crt.pem' }
+
 
 #
 # Other SSL Certificates
@@ -59,10 +91,10 @@
 - set_fact:
     cert_items:
      - { prefix: "{{ ripple_solution_admin_crt_prefix }}", check: true }
-     - { prefix: "{{ fx_connector_crt_prefix }}",          check: "{{ fx_connector_enabled | default(False) | bool }}" }
-     - { prefix: "{{ ledger_crt_prefix }}",                check: "{{ ilp_ledgers | default([]) | length > 0 }}" }
-     - { prefix: "{{ ripple_connect_crt_prefix }}",        check: "{{ ripple_connect_enabled | default(False) | bool }}" }
-     - { prefix: "{{ validator_crt_prefix }}",             check: "{{ ilp_validator_enabled | default(False) | bool }}" }
+     - { prefix: "{{ fx_connector_crt_prefix }}",   check: "{{ fx_connector_enabled | default(False) | bool }}" }
+     - { prefix: "{{ ledger_crt_prefix }}",         check: "{{ ilp_ledgers_info | default([]) | length > 0 }}" }
+     - { prefix: "{{ ripple_connect_crt_prefix }}", check: "{{ ripple_connect_enabled | default(False) | bool }}" }
+     - { prefix: "{{ validator_crt_prefix }}",      check: "{{ ilp_validator_enabled | default(False) | bool }}" }
     admin_crt_idx:          0
     fx_connector_crt_idx:   1
     ledger_crt_idx:         2
