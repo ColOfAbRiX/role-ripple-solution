@@ -1,0 +1,16 @@
+[Unit]
+Description=Ripple Solution
+Wants=network.target
+After=network.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=true
+ExecStart=/etc/init.d/ripple-solution start
+ExecStop=/etc/init.d/ripple-solution stop
+StandardOutput=syslog
+User=root
+Group=root
+
+[Install]
+WantedBy=multi-user.target

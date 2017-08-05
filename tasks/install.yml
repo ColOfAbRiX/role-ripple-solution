@@ -30,3 +30,15 @@
     update_cache: yes
     name: ripple-solution
     state: present
+
+- name: "Copy Custom Scripts"
+  copy:
+    src:    opt/ripple-solution/scripts/decrypt_string.js
+    dest:   /opt/ripple-solution/scripts/decrypt_string.js
+    mode:   '0755'
+    force:  yes
+    owner:  "{{ ripple_solution_user }}"
+    group:  "{{ ripple_solution_group }}"
+    seuser: system_u
+    serole: object_r
+    setype: usr_t

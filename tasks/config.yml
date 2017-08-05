@@ -1,31 +1,83 @@
 ---
 
+# # The script encrypt_string.js creates different output every time it's run for the same password
+# # and this makes the file secrets.json to change. A change in a configuration file prompts Ansible
+# # to restart Ripple and this is something we don't want. Here we store the passwords (as safely as
+# # possible) to compare them with the ones that are provided and encrypt them only when needed.
+
+# - name: "Read Existing Passwords"
+#   command: cat {{ key_path }}/passwords.json
+#   register: existing_passwords_tmp
+#   changed_when: false
+#   ignore_errors: yes
+
+# - set_fact:
+#     existing_passwords: "{{ existing_passwords_tmp.stdout | default([]) | from_json }}"
+#   when: existing_passwords_tmp | succeeded
+
+# - set_fact:
+#     existing_passwords: []
+#   when: existing_passwords_tmp | failed
+
+# - set_fact:
+#     encrypt_passwords_tmp:
+#      - "{{ ripple_connect_db_pass | default(omit) }}"
+#      - "{{ ripple_connect_rabbitmq.mq_password | default(omit) }}"
+
+# - set_fact:
+#     ripple_connect_db_pass_idx:       0
+#     ripple_connect_rmq_pass_idx:      1
+#     ripple_connect_partmers_pass_idx: 2
+#     ripple_connect_partmers_pass_count: "{{ ripple_connect_partners | length }}"
+#     encrypt_passwords: "{{ (encrypt_passwords_tmp + ripple_connect_partners | map(attribute='password') | list) | list }}"
+
+# - name: "Store Current Passwords"
+#   copy:
+#     content: "{{ existing_passwords | to_nice_json }}"
+#     dest:   "{{ key_path }}/passwords.json"
+#     mode:   '0400'
+#     force:  yes
+#     owner:  root
+#     group:  root
+#     seuser: system_u
+#     serole: object_r
+#     setype: usr_t
+
+# - debug: var=item
+#   with_together:
+#    - "{{ encrypt_passwords }}"
+#    - "{{ existing_passwords }}"
+
+# - name: "Encrypt Passwords"
+#   shell: node {{ ripple_solution_base }}/scripts/encrypt_string.js {{ admin_key }} <<< '{{ item.0 }}'
+#   changed_when: false
+#   register: encrypted_passwords
+#   when: item.0 != item.1
+#   with_together:
+#    - "{{ encrypt_passwords }}"
+#    - "{{ existing_passwords }}"
+
+# - debug: var=encrypted_passwords
+# - fail:
+
 #
 # Passwords encryption
 #
 
-- name: "Read Existing Secrets"
-  command: cat {{ ripple_solution_config_base }}/secrets.json
-  register: existing_secrets_tmp
-  ignore_errors: yes
-
-- set_fact:
-    existing_secrets: "{{ existing_secrets_tmp.stdout | from_json }}"
-
 - name: "Encrypt Known Remotes Passwords"
-  shell: node /opt/ripple-solution/scripts/encrypt_string.js {{ admin_key }} <<< '{{ item.password }}'
+  shell: node {{ ripple_solution_base }}/scripts/encrypt_string.js {{ admin_key }} <<< '{{ item.password }}'
   changed_when: false
   register: encrypted_known_remote_passwords
   with_items:
    - "{{ ripple_connect_partners }}"
 
 - name: "Encrypt Database Passwords"
-  shell: node /opt/ripple-solution/scripts/encrypt_string.js {{ admin_key }} <<< '{{ ripple_connect_db_pass }}'
+  shell: node {{ ripple_solution_base }}/scripts/encrypt_string.js {{ admin_key }} <<< '{{ ripple_connect_db_pass }}'
   changed_when: false
   register: encrypted_database_password
 
-- name: "Encrypt RabbiMQ Passwords"
-  shell: node /opt/ripple-solution/scripts/encrypt_string.js {{ admin_key }} <<< '{{ ripple_connect_rabbitmq.mq_password }}'
+- name: "Encrypt RabbitMQ Passwords"
+  shell: node {{ ripple_solution_base }}/scripts/encrypt_string.js {{ admin_key }} <<< '{{ ripple_connect_rabbitmq.mq_password }}'
   changed_when: false
   when: ripple_connect_rabbitmq | default({})
   register: encrypted_rabbitmq_password
@@ -35,35 +87,35 @@
 #
 
 - name: "Hash Operator Passwords"
-  shell: node /opt/ripple-solution/scripts/hash_password.js <<< '{{ item.username }}:RippleSolution:{{ item.password }}'
+  shell: node {{ ripple_solution_base }}/scripts/hash_password.js <<< '{{ item.username }}:RippleSolution:{{ item.password }}'
   changed_when: false
   register: hashed_operator_passwords
   with_items:
    - "{{ ripple_connect_users | selectattr('type', 'equalto', 'operator') | list }}"
 
 - name: "Hash Monitor Passwords"
-  shell: node /opt/ripple-solution/scripts/hash_password.js <<< '{{ item.username }}:RippleSolution:{{ item.password }}'
+  shell: node {{ ripple_solution_base }}/scripts/hash_password.js <<< '{{ item.username }}:RippleSolution:{{ item.password }}'
   changed_when: false
   register: hashed_monitor_passwords
   with_items:
    - "{{ ripple_connect_users | selectattr('type', 'equalto', 'monitor') | list }}"
 
 - name: "Hash Custom Rate Operator Passwords"
-  shell: node /opt/ripple-solution/scripts/hash_password.js <<< '{{ item.username }}:RippleSolution:{{ item.password }}'
+  shell: node {{ ripple_solution_base }}/scripts/hash_password.js <<< '{{ item.username }}:RippleSolution:{{ item.password }}'
   changed_when: false
   register: hashed_custom_rate_operator_passwords
   with_items:
    - "{{ ripple_connect_users | selectattr('type', 'equalto', 'custom_rate_operator') | list }}"
 
 - name: "Hash Partner Passwords"
-  shell: node /opt/ripple-solution/scripts/hash_password.js <<< '{{ item.username }}:RippleSolution:{{ item.password }}'
+  shell: node {{ ripple_solution_base }}/scripts/hash_password.js <<< '{{ item.username }}:RippleSolution:{{ item.password }}'
   changed_when: false
   register: hashed_partner_passwords
   with_items:
    - "{{ ripple_connect_partners | sum(attribute='partner_users', start=[]) | list }}"
 
 #
-# Read Key Pairs and Fingerprints
+# Read Keys and Fingerprints
 #
 
 - name: "Read Ripple Connect Secrets"
@@ -91,19 +143,19 @@
   when: ilp_validator_enabled | bool
 
 - name: "Read Fingerprints"
-  shell: "cat {{ cert_path }}/{{ item.prefix }}.fpt"
+  shell: "cat {{ cert_path }}/{{ item.crt_prefix }}.fpt"
   changed_when: false
-  when: item.check
+  when: item.enabled
   with_items:
    - "{{ cert_items }}"
   register: fingerprints
+
 
 #
 # Configuration files
 #
 
-- name: "Construct Files Content"
-  set_fact:
+- set_fact:
     client_credentials:
       operator:
         users:  "{{ ripple_connect_users | selectattr('type', 'equalto', 'operator') | list }}"
@@ -133,8 +185,7 @@
     seuser: system_u
     serole: object_r
     setype: usr_t
-  # notify:
-  #  - "Restart Ripple Solution"
+  register: config_files_status
   with_items:
    - config-ilp.json
    - config.json

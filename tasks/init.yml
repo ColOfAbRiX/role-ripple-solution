@@ -1,7 +1,30 @@
 ---
 
+- name: "Install Systemd Unit"
+  copy:
+    src:    etc/systemd/system/ripple-solution.service
+    dest:   /etc/systemd/system/ripple-solution.service
+    mode:   '0644'
+    force:  yes
+    owner:  root
+    group:  root
+    seuser: system_u
+    serole: object_r
+    setype: systemd_unit_file_t
+  register: systemd_ripple
+
+- name: "Update Systemd"
+  command: systemctl daemon-reload
+  when: systemd_ripple | changed
+
 - name: "Start Ripple Solution"
-  command: service ripple-solution start
+  service: name=ripple-solution state=started enabled=yes
+
+- name: "Restart Ripple Solution"
+  service: name=ripple-solution state=restarted
+  when:  config_files_status | changed or
+         remote_certs_status | changed or
+         ripple_solution_reset_db | default(False) | bool
 
 - name: "Wait for all Services"
   wait_for:
@@ -11,51 +34,3 @@
   when: item.enabled
   with_items:
    - "{{ ripple_solution_info }}"
-
-- name: "Check Transactional Accounts on Local Ledgers"
-  shell: "{{ ripple_solution_base }}/scripts/rs_requests.sh {{ item.url }}/account/{{ ripple_connect_ledger_user }} --method GET --cert {{ admin_cert }} --key {{ admin_key }} --ca {{ ca_cert }}"
-  changed_when: false
-  failed_when: transact_accounts | failed and
-               'Account does not exist' not in transact_accounts.stderr
-  when: item.enabled | default(False) | bool and
-        item.install_local | default(False) | bool
-  register: transact_accounts
-  with_items:
-   - "{{ ilp_ledgers_info }}"
-
-- name: "Transactional Account on Local Ledgers"
-  shell: |
-    {{ ripple_solution_base }}/scripts/rs_requests.sh "{{ item.0.url }}/account" \
-        --method PUT \
-        --cert {{ admin_cert }} --key {{ admin_key }} --ca {{ ca_cert }} \
-        --body "{ \"name\": \"{{ ripple_connect_ledger_user }}\", \"minimum_allowed_balance\": \"-1000000\", \"fingerprint\": \"{{ fingerprints.results[ripple_connect_crt_idx].stdout }}\", \"notification_url\": \"{{ ripple_connect_info.url }}/ledger/notifications\" }"
-  when: item.0.enabled | default(False) | bool and
-        item.0.install_local | default(False) | bool and
-        '200' not in item.1.stdout
-  with_together:
-   - "{{ ilp_ledgers_info }}"
-   - "{{ transact_accounts.results }}"
-
-- name: "Check Connector Accounts on Local Ledgers"
-  shell: "{{ ripple_solution_base }}/scripts/rs_requests.sh {{ item.url }}/account/{{ fx_connector_ledger_user }} --method GET --cert {{ admin_cert }} --key {{ admin_key }} --ca {{ ca_cert }}"
-  changed_when: false
-  failed_when: connector_accounts | failed and
-               'Account does not exist' not in connector_accounts.stderr
-  when: item.enabled | default(False) | bool and
-        item.install_local | default(False) | bool
-  register: connector_accounts
-  with_items:
-   - "{{ ilp_ledgers_info }}"
-
-- name: "Connector Account on Local Ledgers"
-  shell: |
-    {{ ripple_solution_base }}/scripts/rs_requests.sh "{{ item.0.url }}/account" \
-        --method PUT \
-        --cert {{ admin_cert }} --key {{ admin_key }} --ca {{ ca_cert }} \
-        --body "{ \"name\": \"{{ fx_connector_ledger_user }}\", \"minimum_allowed_balance\": \"-1000000\", \"fingerprint\": \"{{ fingerprints.results[fx_connector_crt_idx].stdout }}\", \"notification_url\": \"{{ fx_connector_info.url }}/notification\" }"
-  when: item.0.enabled | default(False) | bool and
-        item.0.install_local | default(False) | bool and
-        '200' not in item.1.stdout
-  with_together:
-   - "{{ ilp_ledgers_info }}"
-   - "{{ transact_accounts.results }}"

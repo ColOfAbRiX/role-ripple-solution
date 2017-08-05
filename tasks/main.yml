@@ -45,6 +45,13 @@
   tags: ripple-solution
 
 - name: "Initialization"
-  become_user: "{{ ripple_solution_user }}"
   include: init.yml
+  tags: ripple-solution
+
+- name: "Ledger Accounts"
+  include: accounts.yml
+  with_items:
+   - "{{ ilp_ledgers_info }}"
+  loop_control:
+    loop_var: ledger
   tags: ripple-solution

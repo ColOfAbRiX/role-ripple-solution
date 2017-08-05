@@ -15,7 +15,7 @@
     "LEDGER_DB_URI": "{{ ledger.db_string }}",
     "LEDGER_TLS_KEY": "{{ key_path }}/{{ ledger_crt_prefix }}-key.pem",
     "LEDGER_TLS_CERTIFICATE": "{{ cert_path }}/{{ ledger_crt_prefix }}-crt.pem",
-    "LEDGER_ADMIN_FINGERPRINT": "{{ fingerprints.results[admin_crt_idx].stdout }}",
+    "LEDGER_ADMIN_FINGERPRINT": "{{ fingerprints.results[admin_crt_idx | int].stdout }}",
     "LEDGER_AMOUNT_SCALE": {{ ripple_connect_config.amount_decimal_scale }},
 {% for key, value in (ledger.config | default({})).iteritems() %}
     "LEDGER_{{ key | upper }}": "{{ value }}",
@@ -58,7 +58,7 @@
     "CONNECTOR_DB_URI": "{{ fx_connector_info.db_string }}",
     "CONNECTOR_TLS_KEY": "{{ key_path }}/{{ fx_connector_crt_prefix }}-key.pem",
     "CONNECTOR_TLS_CERTIFICATE": "{{ cert_path }}/{{ fx_connector_crt_prefix }}-crt.pem",
-    "CONNECTOR_ADMIN_FINGERPRINT": "{{ fingerprints.results[admin_crt_idx].stdout }}",
+    "CONNECTOR_ADMIN_FINGERPRINT": "{{ fingerprints.results[admin_crt_idx | int].stdout }}",
 {% for key, value in (fx_connector_config | default({})).iteritems() %}
     "CONNECTOR_{{ key | upper }}": "{{ value }}",
 {% endfor %}
@@ -75,7 +75,7 @@
 {% for ledger in ilp_ledgers_info | default([]) %}
       "{{ ledger.url }}/account/{{ fx_connector_ledger_user }}": {
         "authorized_access_fingerprints": [
-          "{{ fingerprints.results[ripple_connect_crt_idx].stdout }}"
+          "{{ fingerprints.results[ripple_connect_idx | int].stdout }}"
         ],
         "cert": "{{ cert_path }}/{{ fx_connector_crt_prefix }}-crt.pem",
         "key": "{{ key_path }}/{{ fx_connector_crt_prefix }}-key.pem",
