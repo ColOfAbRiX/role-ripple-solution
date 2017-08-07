@@ -13,8 +13,8 @@
     "LEDGER_HOSTNAME": "{{ ledger.host }}",
     "LEDGER_PORT": {{ ledger.port }},
     "LEDGER_DB_URI": "{{ ledger.db_string }}",
-    "LEDGER_TLS_KEY": "{{ key_path }}/{{ ledger_crt_prefix }}-key.pem",
-    "LEDGER_TLS_CERTIFICATE": "{{ cert_path }}/{{ ledger_crt_prefix }}-crt.pem",
+    "LEDGER_TLS_KEY": "{{ key_path }}/{{ ledger.crt_prefix }}-key.pem",
+    "LEDGER_TLS_CERTIFICATE": "{{ cert_path }}/{{ ledger.crt_prefix }}-crt.pem",
     "LEDGER_ADMIN_FINGERPRINT": "{{ fingerprints.results[admin_crt_idx | int].stdout }}",
     "LEDGER_AMOUNT_SCALE": {{ ripple_connect_config.amount_decimal_scale }},
 {% for key, value in (ledger.config | default({})).iteritems() %}

@@ -5,11 +5,14 @@
 #
 
 import six
+import json
 from distutils.util import strtobool
 
 def build_ripple_extra(value, rdbms='postgres', extra_vars={}):
     """
-    Build some useful values from the raw configuration data
+    Build some useful values from the raw configuration data. This allows to use
+    uniform data structures that can be accessed with loops and that are more
+    generic. See tasks/datastructs.yml
     """
 
     # Service URL
@@ -64,12 +67,66 @@ def build_ripple_extra(value, rdbms='postgres', extra_vars={}):
     return value
 
 
+def list_encrypted_passwords(secrets_json):
+    """
+    Creates a list of encrypted passwords from the JSON loaded from secrets.json
+    """
+    output = []
+    try:
+        secrets_json = json.loads(secrets_json)
+    except:
+        secrets_json = {}
+
+    # Database password
+    output.append({
+        'key': secrets_json.get('encrypted_database_password_key', ''),
+        'password': secrets_json.get('encrypted_database_password', '')
+    })
+
+    # RabbitMQ
+    output.append({
+        'key': secrets_json.get('encrypted_mq_password_key', ''),
+        'password': secrets_json.get('encrypted_mq_password', '')
+    })
+
+    # External credentials
+    credentials_key = secrets_json.get('external_credentials_password_key', '')
+    for k, v in secrets_json.get('external_credentials', {}).iteritems():
+        output.append({
+            'key': credentials_key,
+            'password': v.get('encrypted_password', '')
+        })
+
+    return output
+
+
+def list_clear_passwords(key, database=None, rmq=None, partners=[]):
+    """
+    Creates a list of cleartext passwords from the available data
+    """
+    output =[]
+
+    # Database password
+    output.append({'key': key, 'password': database})
+
+    # RabbitMQ
+    output.append({'key': key,'password': rmq})
+
+    # External credentials
+    for v in partners:
+        output.append({'key': key,'password': v['password']})
+
+    return output
+
+
 class FilterModule(object):
     """ Ansible jinja2 filters """
 
     def filters(self):
         return {
-            'build_ripple_extra': build_ripple_extra
+            'build_ripple_extra': build_ripple_extra,
+            'list_encrypted_passwords': list_encrypted_passwords,
+            'list_clear_passwords': list_clear_passwords
         }
 
 # vim: ft=python:ts=4:sw=4

@@ -1,2 +1,302 @@
 ---
 # defaults file for ripple-solution
+
+#
+# General Configuration
+#
+
+# Ripple Paths
+ripple_solution_base:         /opt/ripple-solution
+ripple_solution_config_base:  "{{ ripple_solution_base }}/config"
+ripple_solution_cert_base:    "{{ ripple_solution_config_base }}/crypto"
+ripple_solution_schema_base:  "{{ ripple_solution_base }}/schema/postgres"
+ripple_solution_scripts_base: "{{ ripple_solution_base }}/scripts"
+
+# User and group running Ripple
+ripple_solution_user:  ripple_solution
+ripple_solution_group: ripple_solution
+
+# RDBMS
+ripple_solution_db_dialect: postgres
+
+# Prefix for certificate names. Full certificates names will be in the form of
+# "<prefix>-crt.pem" and the keys will be "<prefix>-key.pem"
+ripple_solution_ca_prefix: "{{ ansible_hostname }}-ca"
+ripple_solution_admin_crt_prefix: "{{ ansible_hostname }}-admin"
+ripple_connect_crt_prefix: "{{ ansible_hostname }}-ripple-connect"
+ledger_crt_prefix:         "{{ ansible_hostname }}-ledger"
+validator_crt_prefix:      "{{ ansible_hostname }}-validator"
+fx_connector_crt_prefix:   "{{ ansible_hostname }}-fx-connector"
+
+# Certificates to access the Ripple repository
+ripple_solution_repo_cert_files: []
+# - "{{ ssl_certificates_base }}/ripple_solution/ripple-private.client.crt"
+# - "{{ ssl_certificates_base }}/ripple_solution/ripple-private.client.crt"
+
+# Certificates used by Ripple. If they match the *_crt_prefix files, those file
+# will not be created. So this can be used to specify custom certificats for the
+# Ripple instance
+ripple_solution_use_certs: []
+# - "{{ ssl_certificates_base }}/ca/ripple_solution_ca.crt"
+
+# Keys used by Ripple. If they match the *_crt_prefix files, those file will not
+# be created. So this can be used to specify custom certificats for the Ripple
+# instance
+ripple_solution_use_keys: []
+# - "{{ ssl_certificates_base }}/ca/ripple_solution_ca.key"
+
+# Certificates of remote parties used by Ripple.
+ripple_solution_use_remote_certs: []
+# - "{{ ssl_certificates_base }}/ca/ripple_solution_ca.crt"
+
+
+#
+# Ripple Connect
+#
+
+# Service
+ripple_connect_enabled: false
+ripple_connect_port:    5000
+ripple_connect_host:    "{{ ansible_fqdn }}"
+
+# Database setup
+ripple_connect_db_host: ''
+ripple_connect_db_port: 5432
+ripple_connect_db_user: user_rc
+ripple_connect_db_pass: Passw0rd
+ripple_connect_db_name: ripple_connect
+ripple_connect_db_admin_user: ''
+ripple_connect_db_admin_pass: ''
+
+# Partners Configuration and their credentials to connect to the local instance
+ripple_connect_partners: []
+# - address:  partner.example.com:5000
+#   username: ripple_connect_user
+#   password: Passw0rd
+#   partner_users:
+#    - username: ripple_connect_user
+#      password: Passw0rd
+
+# Trusted certificates of external services
+ripple_connect_trusted_external_certs: []
+# - ripple_solution_ca.crt
+
+# Connectors managed by Ripple Connect. Don't include here local Connectors that
+# use the setting "fx_connector_install_local=yes".
+ripple_connect_connectors: []
+# - url: https://provider.example.com:3000
+
+# Validators managed by Ripple Connect. Don't include here local Validators that
+# use the setting "ilp_validator_install_local=yes".
+ripple_connect_validators: []
+# - iri: https://provider.example.com:4000
+#   public_key: CRiRdYySjsPfSS5b7C17Vkx8/RCzhfzd77RGw54NkLY=
+
+# Ledgers managed by Ripple Connect. Don't include here local Ledgers that use
+# the setting "install_local=yes".
+ripple_connect_ledgers: []
+
+# Pairing of connector-validators known by this Rippple Connect
+ripple_connect_connector_validator_pairs: []
+# - connector_url: https://provider.example.com:3000
+#   validator_url: https://provider.example.com:4000
+
+# If other Ripple Solution components are present on the machine, setting this
+# to true will configure the other components to use this Ripple Connect instance
+ripple_connect_install_local: true
+
+# Users of Ripple Connect
+ripple_connect_users:
+ - username: consumer_operator
+   password: Passw0rd
+   type:     operator
+ - username: consumer_monitor
+   password: Passw0rd
+   type:     monitor
+ - username: consumer_custom_rate_operator
+   password: Passw0rd
+   type:     custom_rate_operator
+
+# Name of the Ripple Connect account on the Ledgers
+ripple_connect_ledger_user: transact
+
+# RabbitMQ configuration to push messages
+ripple_connect_rabbitmq: {}
+
+# Ripple Connect specific configuration
+ripple_connect_secrets_encrypted: "false"
+ripple_connect_enable_ui: "true"
+ripple_connect_config: {}
+#  use_https: "true"
+#  quote_expiration_mins: 720
+#  sending_payment_expiration_offset_mins: 2160
+#  settlement_payment_expiration_offset_mins: 2220
+#  receiving_payment_expiration_offset_mins: 3660
+#  log_level: info
+#  secrets_file_path: secrets.json
+#  settlement_expiry_duration_seconds: 120
+#  access_token_expiration_hours: 12
+#  access_token_length: 255
+#  message_length_max: 255
+#  sending_fee_percentage: 1
+#  receiving_fee_percentage: 2
+#  sending_fee_amount: 0.01
+#  receiving_fee_amount: 0.02
+#  currency_specific_fees:
+#    USD:
+#      sending_fee_amount: 0
+#      sending_fee_percentage: 0.5
+#    EUR:
+#      receiving_fee_amount: 0.02
+#      receiving_fee_percentage: 1.1
+#  receiver_auto_accept_quote: "false"
+#  requested_additional_info:
+#    from_sender:
+#     - secondary_id
+#  api_prefix: ''
+#  payment_labels:
+#   - compliance_succeeded
+#   - compliance_failed
+#   - sending_payment_pending
+#   - sending_payment_succeeded
+#   - sending_payment_failed
+#   - sending_postprocess_succeeded
+#   - sending_postprocess_pending
+#   - receiving_payment_pending
+#   - receiving_postprocess_pending
+#   - receiving_postprocess_succeeded
+#  amount_decimal_scale: 2
+
+
+#
+# ILP Ledgers
+#
+
+# List of ILP Ledgers on the machine
+ilp_ledgers: []
+#   # Service
+# - name: ledger_euro
+#   enabled: false
+#   port: 6000
+#   host: "{{ ansible_fqdn }}"
+#
+#   # This is usually the same as "ledger_crt_prefix"
+#   crt_prefix: "{{ ledger_crt_prefix }}"
+#
+#   # Database
+#   db_host: ''
+#   db_port: 5432
+#   db_user: user_leur
+#   db_pass: Passw0rd
+#   db_name: ledger_eur
+#   db_admin_user: ''
+#   db_admin_pass: ''
+#
+#   # Currency managed by the Ledger
+#   currency: EUR
+#
+#   # If other Ripple Solution components are present on the machine, setting
+#   # this to true will configure the other components to use this Ledger
+#   # instance
+#   install_local: true
+#
+#   # Trusted certificates of external services
+#   trusted_external_certs: []
+#   # - ripple_solution_ca.crt
+#
+#   # Accounts to create on the Ledger
+#   accounts: []
+#   # - account:       "{{ fx_connector_ledger_user }}"
+#   #   fingerprint:   '46:0F:D7:68:B6:DA:4A:63:DE:DD:C6:00:00:54:BD:EE:6A:DB:6B:E1:89:FA:C2:27:1D:5B:AC:4B:50:18:50:1C'
+#   #   notifications: 'https://provider.example.com:5000/ledger/notifications'
+#
+#   # Ledger configuration
+#   config:
+#     log_level: info
+#     use_https: "true"
+#     auth_client_cert_enabled: "true"
+
+
+#
+# FX Connector
+#
+
+# Service
+fx_connector_enabled: no
+fx_connector_port: 3000
+fx_connector_host: "{{ ansible_fqdn }}"
+
+# Database
+fx_connector_db_host: ''
+fx_connector_db_port: 5432
+fx_connector_db_user: user_fxc
+fx_connector_db_pass: Passw0rd
+fx_connector_db_name: fx_connector
+fx_connector_db_admin_user: ''
+fx_connector_db_admin_pass: ''
+
+# Trusted certificates of external services
+fx_connector_trusted_external_certs: []
+# - ripple_solution_ca.crt
+
+# Ledgers managed by FX Connector. Don't include here local Ledgers that use the
+# setting "install_local=yes".
+fx_connector_ledgers: []
+# - url: https://consumer.example.com:6000
+#   cert: ripple_solution_ca.crt
+#   fingerprints:
+#    - '8F:14:75:41:85:43:CB:16:70:21:02:B3:28:8A:9A:6E:B6:8C:89:55:E3:28:F1:F4:E3:FA:A4:23:40:23:43:7B'
+
+# Associations between ledgers managed by this FX Connector
+fx_connector_pairs: []
+# - -'EUR@https://provider.example.com:6000'
+#   - EUR@https://consumer.example.com:6000'
+
+# If other Ripple Solution components are present on the machine, setting this
+# to true will configure the other components to use this FX Connector instance
+fx_connector_install_local: true
+
+# Name of the FX Connector account on the Ledgers
+fx_connector_ledger_user: connector
+
+# The ILP Validator to associate with this FX Connector. Don't include here
+# local Validators that use the setting "ilp_validator_install_local=yes".
+fx_connector_use_validator_url: ''
+
+# Connector configuration
+fx_connector_config: {}
+#  log_level: info
+#  use_https: "true"
+#  downtime_tolerance_interval: 5000
+
+
+#
+# ILP Validator
+#
+
+# Service
+ilp_validator_enabled: no
+ilp_validator_port: 4000
+ilp_validator_host: "{{ ansible_fqdn }}"
+
+# Database
+ilp_validator_db_host: ''
+ilp_validator_db_port: 5432
+ilp_validator_db_user: user_ilpv
+ilp_validator_db_pass: Passw0rd
+ilp_validator_db_name: ilp_validator
+ilp_validator_db_admin_user: ''
+ilp_validator_db_admin_pass: ''
+
+# Trusted certificates of external services
+ilp_validator_trusted_external_certs: []
+# - ripple_solution_ca.crt
+
+# If other Ripple Solution components are present on the machine, setting this
+# to true will configure the other components to use this ILP Validator instance
+ilp_validator_install_local: true
+
+# ILP Validator configuration
+ilp_validator_config: {}
+#  log_level: info
+#  use_https: "true"

@@ -1,114 +1,76 @@
 ---
 
-# # The script encrypt_string.js creates different output every time it's run for the same password
-# # and this makes the file secrets.json to change. A change in a configuration file prompts Ansible
-# # to restart Ripple and this is something we don't want. Here we store the passwords (as safely as
-# # possible) to compare them with the ones that are provided and encrypt them only when needed.
-
-# - name: "Read Existing Passwords"
-#   command: cat {{ key_path }}/passwords.json
-#   register: existing_passwords_tmp
-#   changed_when: false
-#   ignore_errors: yes
-
-# - set_fact:
-#     existing_passwords: "{{ existing_passwords_tmp.stdout | default([]) | from_json }}"
-#   when: existing_passwords_tmp | succeeded
-
-# - set_fact:
-#     existing_passwords: []
-#   when: existing_passwords_tmp | failed
-
-# - set_fact:
-#     encrypt_passwords_tmp:
-#      - "{{ ripple_connect_db_pass | default(omit) }}"
-#      - "{{ ripple_connect_rabbitmq.mq_password | default(omit) }}"
-
-# - set_fact:
-#     ripple_connect_db_pass_idx:       0
-#     ripple_connect_rmq_pass_idx:      1
-#     ripple_connect_partmers_pass_idx: 2
-#     ripple_connect_partmers_pass_count: "{{ ripple_connect_partners | length }}"
-#     encrypt_passwords: "{{ (encrypt_passwords_tmp + ripple_connect_partners | map(attribute='password') | list) | list }}"
-
-# - name: "Store Current Passwords"
-#   copy:
-#     content: "{{ existing_passwords | to_nice_json }}"
-#     dest:   "{{ key_path }}/passwords.json"
-#     mode:   '0400'
-#     force:  yes
-#     owner:  root
-#     group:  root
-#     seuser: system_u
-#     serole: object_r
-#     setype: usr_t
-
-# - debug: var=item
-#   with_together:
-#    - "{{ encrypt_passwords }}"
-#    - "{{ existing_passwords }}"
-
-# - name: "Encrypt Passwords"
-#   shell: node {{ ripple_solution_base }}/scripts/encrypt_string.js {{ admin_key }} <<< '{{ item.0 }}'
-#   changed_when: false
-#   register: encrypted_passwords
-#   when: item.0 != item.1
-#   with_together:
-#    - "{{ encrypt_passwords }}"
-#    - "{{ existing_passwords }}"
-
-# - debug: var=encrypted_passwords
-# - fail:
-
 #
 # Passwords encryption
 #
 
-- name: "Encrypt Known Remotes Passwords"
-  shell: node {{ ripple_solution_base }}/scripts/encrypt_string.js {{ admin_key }} <<< '{{ item.password }}'
+# The script encrypt_string.js creates different output every time it's run for
+# the same password and this makes the file secrets.json to change. A change in
+# a configuration file prompts Ansible to restart Ripple and this is something
+# we don't want.
+
+- name: "Read Existing Passwords"
+  command: cat {{ ripple_solution_config_base }}/secrets.json
+  register: secrets_file
   changed_when: false
-  register: encrypted_known_remote_passwords
+  failed_when: false
+
+- set_fact:
+    ripple_connect_db_pass_idx:       0
+    ripple_connect_rmq_pass_idx:      1
+    ripple_connect_partners_pass_idx: 2
+    existing_encrypted_passwords: "{{ secrets_file.stdout | list_encrypted_passwords }}"
+    cleartext_passwords:          "{{ admin_key | list_clear_passwords(ripple_connect_db_pass, ripple_connect_rabbitmq.mq_password | default(omit), ripple_connect_partners) }}"
+
+- name: "Decrypt Existing Passwords"
+  shell: node {{ ripple_solution_scripts_base }}/decrypt_string.js {{ item.key }} <<< '{{ item.password }}'
+  changed_when: false
+  register: decrypted_passwords
+  when: item.key != '' and
+        item.password != ''
   with_items:
-   - "{{ ripple_connect_partners }}"
+   - "{{ existing_encrypted_passwords }}"
 
-- name: "Encrypt Database Passwords"
-  shell: node {{ ripple_solution_base }}/scripts/encrypt_string.js {{ admin_key }} <<< '{{ ripple_connect_db_pass }}'
+- name: "Encrypt Passwords"
+  shell: node {{ ripple_solution_scripts_base }}/encrypt_string.js {{ item.0.key }} <<< '{{ item.0.password }}'
   changed_when: false
-  register: encrypted_database_password
+  register: encrypted_passwords_output
+  when: item.0.password != item.1.stdout | default('')
+  with_together:
+   - "{{ cleartext_passwords }}"
+   - "{{ decrypted_passwords.results }}"
 
-- name: "Encrypt RabbitMQ Passwords"
-  shell: node {{ ripple_solution_base }}/scripts/encrypt_string.js {{ admin_key }} <<< '{{ ripple_connect_rabbitmq.mq_password }}'
-  changed_when: false
-  when: ripple_connect_rabbitmq | default({})
-  register: encrypted_rabbitmq_password
+- set_fact:
+    encrypted_passwords: "{{ encrypted_passwords_output.results }}"
+
 
 #
 # Passwords hashing
 #
 
 - name: "Hash Operator Passwords"
-  shell: node {{ ripple_solution_base }}/scripts/hash_password.js <<< '{{ item.username }}:RippleSolution:{{ item.password }}'
+  shell: node {{ ripple_solution_scripts_base }}/hash_password.js <<< '{{ item.username }}:RippleSolution:{{ item.password }}'
   changed_when: false
   register: hashed_operator_passwords
   with_items:
    - "{{ ripple_connect_users | selectattr('type', 'equalto', 'operator') | list }}"
 
 - name: "Hash Monitor Passwords"
-  shell: node {{ ripple_solution_base }}/scripts/hash_password.js <<< '{{ item.username }}:RippleSolution:{{ item.password }}'
+  shell: node {{ ripple_solution_scripts_base }}/hash_password.js <<< '{{ item.username }}:RippleSolution:{{ item.password }}'
   changed_when: false
   register: hashed_monitor_passwords
   with_items:
    - "{{ ripple_connect_users | selectattr('type', 'equalto', 'monitor') | list }}"
 
 - name: "Hash Custom Rate Operator Passwords"
-  shell: node {{ ripple_solution_base }}/scripts/hash_password.js <<< '{{ item.username }}:RippleSolution:{{ item.password }}'
+  shell: node {{ ripple_solution_scripts_base }}/hash_password.js <<< '{{ item.username }}:RippleSolution:{{ item.password }}'
   changed_when: false
   register: hashed_custom_rate_operator_passwords
   with_items:
    - "{{ ripple_connect_users | selectattr('type', 'equalto', 'custom_rate_operator') | list }}"
 
 - name: "Hash Partner Passwords"
-  shell: node {{ ripple_solution_base }}/scripts/hash_password.js <<< '{{ item.username }}:RippleSolution:{{ item.password }}'
+  shell: node {{ ripple_solution_scripts_base }}/hash_password.js <<< '{{ item.username }}:RippleSolution:{{ item.password }}'
   changed_when: false
   register: hashed_partner_passwords
   with_items:
