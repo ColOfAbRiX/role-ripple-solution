@@ -62,7 +62,7 @@
     fx_connector_info:   "{{ fx_connector_info_tmp | build_ripple_extra(ripple_solution_db_dialect) }}"
     ilp_ledgers_info:    "{{ ilp_ledgers | map('build_ripple_extra', ripple_solution_db_dialect, ilp_ledgers_extra_vars) | list }}"
 
-- name: "Build Final Datastructure"
+- name: "Build Final Datastructures"
   set_fact:
     ripple_connect_idx:   0
     ilp_validator_idx:    1

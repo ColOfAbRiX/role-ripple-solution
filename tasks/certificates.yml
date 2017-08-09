@@ -21,7 +21,7 @@
      - objects: "{{ ripple_solution_use_certs }}"
        where:   "{{ cert_path }}"
        mode:    '0644'
-     - objects: "{{ ripple_solution_use_certs }}"
+     - objects: "{{ ripple_solution_use_keys }}"
        where:   "{{ key_path }}"
        mode:    '0400'
      - objects: "{{ ripple_solution_use_remote_certs }}"

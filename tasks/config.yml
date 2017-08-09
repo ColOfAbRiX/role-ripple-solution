@@ -90,7 +90,7 @@
    - client_access_token_key
    - ilp_key
 
-- name: "Read Connector Secrets"
+- name: "Read FX Connector Secrets"
   shell: "cat {{ pia_path }}/{{ item }}.pia"
   register: connector_secrets
   changed_when: false
@@ -98,7 +98,7 @@
    - CONNECTOR_QUOTE_HMAC_KEY
   when: fx_connector_enabled | bool
 
-- name: "Read Validator Secrets"
+- name: "Read ILP Validator Secrets"
   shell: "cat {{ pia_path }}/validator_key_pair.pia"
   changed_when: false
   register: validator_key

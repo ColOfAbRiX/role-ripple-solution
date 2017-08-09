@@ -51,7 +51,7 @@
 - name: "Ledger Accounts"
   include: accounts.yml
   with_items:
-   - "{{ ilp_ledgers_info }}"
+   - "{{ ilp_ledgers_info | default([]) }}"
   loop_control:
     loop_var: ledger
   tags: ripple-solution
