@@ -1,0 +1,65 @@
+---
+
+- name: "Stop Ripple Solution"
+  service: name=ripple-solution state=stopped
+  ignore_errors: yes
+
+- name: "Wait for all Services to Stop"
+  wait_for:
+    state: stopped
+    timeout: 10
+    host: "{{ item.host }}"
+    port: "{{ item.port }}"
+  when: item.enabled
+  with_items:
+   - "{{ ripple_solution_info }}"
+
+- name: "Remove User Privileges"
+  postgresql_privs:
+    login_host:      "{{ item.0.db_host }}"
+    login_user:      "{{ item.0.db_admin_user }}"
+    login_password:  "{{ item.0.db_admin_pass }}"
+    port:            "{{ item.0.db_port }}"
+    db:              "{{ item.0.db_name }}"
+    role:            "{{ item.0.db_user }}"
+    type:            "{{ item.1.type }}"
+    schema:          "{{ item.1.schema | default(omit) }}"
+    priv:            "{{ item.1.priv }}"
+    objs:            "{{ item.1.objs }}"
+    state:           absent
+  ignore_errors: yes
+  when: item.0.enabled | default(False) | bool and
+        ripple_solution_reset_db | default(False) | bool
+  with_nested:
+   - "{{ ripple_solution_info }}"
+   - "{{ ripple_solution_db_user_privileges }}"
+
+- name: "Remove Users"
+  postgresql_user:
+    login_host: "{{ item.db_host }}"
+    login_user: "{{ item.db_admin_user }}"
+    login_password: "{{ item.db_admin_pass }}"
+    port:       "{{ item.db_port }}"
+    name:       "{{ item.db_user }}"
+    db:         "{{ item.db_name }}"
+    priv:       ALL
+    state:      absent
+  ignore_errors: yes
+  when: item.enabled | default(False) | bool and
+        ripple_solution_reset_db | default(False) | bool
+  with_items:
+   - "{{ ripple_solution_info }}"
+
+- name: "Remove Databases"
+  postgresql_db:
+    login_host: "{{ item.db_host }}"
+    login_user: "{{ item.db_admin_user }}"
+    login_password: "{{ item.db_admin_pass }}"
+    port:       "{{ item.db_port }}"
+    name:       "{{ item.db_name }}"
+    state:      absent
+  ignore_errors: yes
+  when: item.enabled | default(False) | bool and
+        ripple_solution_reset_db | default(False) | bool
+  with_items:
+   - "{{ ripple_solution_info }}"

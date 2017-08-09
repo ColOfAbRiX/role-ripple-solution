@@ -27,7 +27,7 @@
          created_certs_status | changed or
          ripple_solution_reset_db | default(False) | bool
 
-- name: "Wait for all Services"
+- name: "Wait for all Services to Start"
   wait_for:
     timeout: 30
     host: "{{ item.host }}"

@@ -21,6 +21,11 @@
   include: install.yml
   tags: ripple-solution
 
+- name: "Cleanup DB"
+  delegate_to: localhost
+  include: "{{ ripple_solution_db_dialect }}_clean.yml"
+  tags: ripple-solution
+
 - name: "Pre-Configuration RDBMS"
   delegate_to: localhost
   include: "{{ ripple_solution_db_dialect }}_pre.yml"

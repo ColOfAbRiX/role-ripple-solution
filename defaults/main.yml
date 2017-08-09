@@ -50,6 +50,10 @@ ripple_solution_use_remote_certs: []
 # - "{{ ssl_certificates_base }}/ca/ripple_solution_ca.crt"
 
 
+# Used to reset the instance
+ripple_solution_reset_db: false
+ripple_solution_reset_crypto: false
+
 #
 # Ripple Connect
 #

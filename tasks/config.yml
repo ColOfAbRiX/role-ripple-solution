@@ -26,6 +26,8 @@
   shell: node {{ ripple_solution_scripts_base }}/decrypt_string.js {{ item.key }} <<< '{{ item.password }}'
   changed_when: false
   register: decrypted_passwords
+  failed_when: decrypted_passwords | failed and
+               'pkcs decoding error' not in decrypted_passwords.stderr | default('')
   when: item.key != '' and
         item.password != ''
   with_items:
@@ -42,7 +44,6 @@
 
 - set_fact:
     encrypted_passwords: "{{ encrypted_passwords_output.results }}"
-
 
 #
 # Passwords hashing
