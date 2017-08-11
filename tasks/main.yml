@@ -15,7 +15,7 @@
 
 - name: "Build Data Structures"
   include: datastructs.yml
-  tags: ripple-solution
+  tags: [always, ripple-solution]
 
 - name: "Install Ripple Solution"
   include: install.yml
@@ -24,6 +24,7 @@
 - name: "Cleanup DB"
   delegate_to: localhost
   include: "{{ ripple_solution_db_dialect }}_clean.yml"
+  when: ripple_solution_reset_db | default(False) | bool
   tags: ripple-solution
 
 - name: "Pre-Configuration RDBMS"

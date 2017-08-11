@@ -28,8 +28,7 @@
     objs:            "{{ item.1.objs }}"
     state:           absent
   ignore_errors: yes
-  when: item.0.enabled | default(False) | bool and
-        ripple_solution_reset_db | default(False) | bool
+  when: item.0.enabled | default(False) | bool
   with_nested:
    - "{{ ripple_solution_info }}"
    - "{{ ripple_solution_db_user_privileges }}"
@@ -45,8 +44,7 @@
     priv:       ALL
     state:      absent
   ignore_errors: yes
-  when: item.enabled | default(False) | bool and
-        ripple_solution_reset_db | default(False) | bool
+  when: item.enabled | default(False) | bool
   with_items:
    - "{{ ripple_solution_info }}"
 
@@ -59,7 +57,6 @@
     name:       "{{ item.db_name }}"
     state:      absent
   ignore_errors: yes
-  when: item.enabled | default(False) | bool and
-        ripple_solution_reset_db | default(False) | bool
+  when: item.enabled | default(False) | bool
   with_items:
    - "{{ ripple_solution_info }}"

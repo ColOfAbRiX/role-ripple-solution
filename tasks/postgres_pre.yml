@@ -29,6 +29,23 @@
   with_items:
    - "{{ ripple_solution_info }}"
 
+- name: "Create Monitoring Users"
+  postgresql_user:
+    login_host: "{{ item.db_host }}"
+    login_user: "{{ item.db_admin_user }}"
+    login_password: "{{ item.db_admin_pass }}"
+    port:       "{{ item.db_port }}"
+    name:       "{{ ripple_solution_db_monitor_user }}"
+    password:   "{{ ripple_solution_db_monitor_pass }}"
+    db:         "{{ item.db_name }}"
+    priv:       ALL
+    role_attr_flags: NOSUPERUSER,NOCREATEDB
+    no_password_changes: yes
+  when: ripple_solution_db_monitor_enabled | default(False) | bool and
+        item.enabled | default(False) | bool
+  with_items:
+   - "{{ ripple_solution_info }}"
+
 - name: "Lock DB for Other Users"
   postgresql_privs:
     login_host: "{{ item.db_host }}"

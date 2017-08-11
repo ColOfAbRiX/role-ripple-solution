@@ -15,22 +15,36 @@ def build_ripple_extra(value, rdbms='postgres', extra_vars={}):
     generic. See tasks/datastructs.yml
     """
 
-    # Service URL
-    default_port = 80
-    service_protocol = "http"
+    # Extra custom values in the root of the dictionary
+    for e_key, e_value in extra_vars.iteritems():
+        value[e_key] = e_value
+
+    # Service name
+    if value['name'] == 'ilp_ledger':
+        value['name'] = "%s_%s" % (value['name'], value['currency'].lower())
+        value['description'] = "%s %s" % (value['description'], value['currency'].upper())
+
+    # HTTPS Enabled
     use_https = value.get('config', {}).get('use_https', False)
     if isinstance(use_https, six.string_types):
         use_https = bool(strtobool(str(use_https.lower())))
+    value['use_https'] = use_https
+
+    # Protocol
+    service_protocol = "http"
+    default_port = 80
     if use_https:
         service_protocol += "s"
         default_port = 443
+    value['protocol'] = service_protocol
 
+    # Address
     service_address = value['host']
     if value['port'] != default_port:
         service_address = "%s:%s" % (service_address, value['port'])
-
     value['address'] = service_address
-    value['protocol'] = service_protocol
+
+    # Full URL
     value['url'] = "%s://%s" % (service_protocol, service_address)
 
     # DB string
@@ -58,10 +72,6 @@ def build_ripple_extra(value, rdbms='postgres', extra_vars={}):
     # SSL certs names
     value['crt_file'] = "%s-crt.pem" % value['crt_prefix']
     value['key_file'] = "%s-key.pem" % value['crt_prefix']
-
-    # Extra custom values in the root of the dictionary
-    for e_key, e_value in extra_vars.iteritems():
-        value[e_key] = e_value
 
     # Return
     return value

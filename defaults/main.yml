@@ -16,8 +16,26 @@ ripple_solution_scripts_base: "{{ ripple_solution_base }}/scripts"
 ripple_solution_user:  ripple_solution
 ripple_solution_group: ripple_solution
 
-# RDBMS
+# Used to reset the instance
+ripple_solution_reset_db: false
+ripple_solution_reset_crypto: false
+
+
+#
+# Database
+#
+
 ripple_solution_db_dialect: postgres
+
+# Database monitoring
+ripple_solution_db_monitor_enabled: false
+ripple_solution_db_monitor_user: user_monitor
+ripple_solution_db_monitor_pass: Passw0rd
+
+
+#
+# Certificates
+#
 
 # Prefix for certificate names. Full certificates names will be in the form of
 # "<prefix>-crt.pem" and the keys will be "<prefix>-key.pem"
@@ -49,10 +67,6 @@ ripple_solution_use_keys: []
 ripple_solution_use_remote_certs: []
 # - "{{ ssl_certificates_base }}/ca/ripple_solution_ca.crt"
 
-
-# Used to reset the instance
-ripple_solution_reset_db: false
-ripple_solution_reset_crypto: false
 
 #
 # Ripple Connect

@@ -3,6 +3,8 @@
 - name: "Aggregate Data"
   set_fact:
     ripple_connect_info_tmp:
+      name:           ripple_connect
+      description:    Ripple Connect
       enabled:        "{{ ripple_connect_enabled | default(False) | bool }}"
       port:           "{{ ripple_connect_port }}"
       host:           "{{ ripple_connect_host }}"
@@ -17,8 +19,12 @@
       db_check_table: public.db_schema_versions
       config:         "{{ ripple_connect_config }}"
       crt_prefix:     "{{ ripple_connect_crt_prefix }}"
+      health_query:   ''
+      health_json:    '"version": *"[0-9]+\.[0-9]+\.[0-9]+"'
 
     ilp_validator_info_tmp:
+      name:           ilp_validator
+      description:    ILP Validator
       enabled:        "{{ ilp_validator_enabled | default(False) | bool }}"
       port:           "{{ ilp_validator_port }}"
       host:           "{{ ilp_validator_host }}"
@@ -33,8 +39,12 @@
       db_check_table: public.n_db_schema_versions
       config:         "{{ ilp_validator_config }}"
       crt_prefix:     "{{ validator_crt_prefix }}"
+      health_query:   '/health'
+      health_json:    '"status": *"OK"'
 
     fx_connector_info_tmp:
+      name:           fx_connector
+      description:    FX Connector
       enabled:        "{{ fx_connector_enabled | default(False) | bool }}"
       port:           "{{ fx_connector_port }}"
       host:           "{{ fx_connector_host }}"
@@ -49,11 +59,17 @@
       db_check_table: public.c_db_schema_versions
       config:         "{{ fx_connector_config }}"
       crt_prefix:     "{{ fx_connector_crt_prefix }}"
+      health_query:   '/health'
+      health_json:    '"status": *"OK"'
 
     ilp_ledgers_extra_vars:
+      name:           ilp_ledger
+      description:    ILP Ledger
       db_sql_file:    ledger.sql
       db_check_table: public.l_db_schema_versions
       crt_prefix:     "{{ ledger_crt_prefix }}"
+      health_query:   '/health'
+      health_json:    '"status": *"OK"'
 
 - name: "Build Temporary Datastructures"
   set_fact:
