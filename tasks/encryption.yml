@@ -1,0 +1,138 @@
+---
+
+#
+# Passwords encryption
+#
+
+# The script encrypt_string.js creates different output every time it's run for
+# the same password and this makes the file secrets.json to change. A change in
+# a configuration file prompts Ansible to restart Ripple and this is something
+# we don't want.
+
+##  secrets.json  ##
+
+- name: "Read Existing RC Passwords"
+  command: cat {{ ripple_solution_config_base }}/secrets.json
+  register: secrets_file
+  changed_when: false
+  failed_when: false
+
+- set_fact:
+    ripple_connect_db_pass_idx:       0
+    ripple_connect_rmq_pass_idx:      1
+    ripple_connect_partners_pass_idx: 2
+    existing_encrypted_rc_passwords:  "{{ secrets_file.stdout | list_encrypted_rc_passwords }}"
+    cleartext_rc_passwords:           "{{ admin_key | list_clear_rc_passwords(ripple_connect_db_pass, ripple_connect_rabbitmq.mq_password | default(omit), ripple_connect_partners) }}"
+
+- name: "Decrypt Existing RC Passwords"
+  shell: node {{ ripple_solution_scripts_base }}/decrypt_string.js {{ item.key }} <<< '{{ item.password }}'
+  changed_when: false
+  register: decrypted_rc_passwords
+  failed_when: decrypted_rc_passwords | failed and
+               'pkcs decoding error' not in decrypted_rc_passwords.stderr | default('')
+  when: item.key != '' and
+        item.password != ''
+  with_items:
+   - "{{ existing_encrypted_rc_passwords }}"
+
+- name: "Encrypt RC Passwords"
+  shell: node {{ ripple_solution_scripts_base }}/encrypt_string.js {{ item.0.key }} <<< '{{ item.0.password }}'
+  changed_when: false
+  register: encrypted_rc_passwords_output
+  when: item.0.password != item.1.stdout | default('')
+  with_together:
+   - "{{ cleartext_rc_passwords }}"
+   - "{{ decrypted_rc_passwords.results }}"
+
+- set_fact:
+    encrypted_rc_passwords: "{{ encrypted_rc_passwords_output.results }}"
+
+##  config-ilp.json  ##
+
+- name: "Read CONNECTOR_QUOTE_HMAC_KEY Keys"
+  shell: "cat {{ pia_path }}/CONNECTOR_QUOTE_HMAC_KEY.pia"
+  register: connector_quote_hmac_key_output
+  changed_when: false
+  when: fx_connector_info.enabled
+
+- set_fact:
+    connector_quote_hmac_key: "{% if fx_connector_info.enabled %}{{ connector_quote_hmac_key_output.stdout.split(' ')[2] }}{% endif %}"
+
+- name: "Read validator_key_pair Keys"
+  shell: "cat {{ pia_path }}/validator_key_pair.pia"
+  changed_when: false
+  register: validator_key_pair_output
+  when: ilp_validator_info.enabled
+
+- set_fact:
+    validator_ed25519_secret_key: "{% if ilp_validator_info.enabled %}{{ validator_key_pair_output.stdout_lines[1].split(' ')[2] }}{% endif %}"
+
+- name: "Read Existing config-ilp.json Strings"
+  command: cat {{ ripple_solution_config_base }}/config-ilp.json
+  register: config_ilp_file
+  changed_when: false
+  failed_when: false
+
+- set_fact:
+    ilp_validator_db_uri_idx:        0
+    ilp_validator_ed25519_secret_key_idx: 1
+    fx_connector_db_uri_idx:         2
+    fx_connector_quote_hmac_key_idx: 3
+    ledgers_db_uri_idx:              4
+    existing_encrypted_ilp_strings:  "{{ config_ilp_file.stdout | list_encrypted_ilp_passwords }}"
+    cleartext_ilp_strings:           "{{ admin_key | list_clear_ilp_passwords(ilp_validator_info, validator_ed25519_secret_key, fx_connector_info, connector_quote_hmac_key, ilp_ledgers_info) }}"
+
+- name: "Decrypt Existing config-ilp.json Strings"
+  shell: node {{ ripple_solution_scripts_base }}/decrypt_string.js {{ item.key }} <<< '{{ item.string }}'
+  changed_when: false
+  register: decrypted_ilp_strings
+  failed_when: decrypted_ilp_strings | failed and
+               'pkcs decoding error' not in decrypted_ilp_strings.stderr | default('')
+  when: item.key != '' and
+        item.string != ''
+  with_items:
+   - "{{ existing_encrypted_ilp_strings }}"
+
+- name: "Encrypt config-ilp.json Strings"
+  shell: node {{ ripple_solution_scripts_base }}/encrypt_string.js {{ item.0.key }} <<< '{{ item.0.string }}'
+  changed_when: false
+  register: encrypted_ilp_strings_output
+  when: item.0.string != item.1.stdout | default('')
+  with_together:
+   - "{{ cleartext_ilp_strings }}"
+   - "{{ decrypted_ilp_strings.results }}"
+
+- set_fact:
+    encrypted_ilp_strings: "{{ encrypted_ilp_strings_output.results }}"
+
+#
+# Passwords hashing
+#
+
+- name: "Hash Operator Passwords"
+  shell: node {{ ripple_solution_scripts_base }}/hash_password.js <<< '{{ item.username }}:RippleSolution:{{ item.password }}'
+  changed_when: false
+  register: hashed_operator_passwords
+  with_items:
+   - "{{ ripple_connect_users | selectattr('type', 'equalto', 'operator') | list }}"
+
+- name: "Hash Monitor Passwords"
+  shell: node {{ ripple_solution_scripts_base }}/hash_password.js <<< '{{ item.username }}:RippleSolution:{{ item.password }}'
+  changed_when: false
+  register: hashed_monitor_passwords
+  with_items:
+   - "{{ ripple_connect_users | selectattr('type', 'equalto', 'monitor') | list }}"
+
+- name: "Hash Custom Rate Operator Passwords"
+  shell: node {{ ripple_solution_scripts_base }}/hash_password.js <<< '{{ item.username }}:RippleSolution:{{ item.password }}'
+  changed_when: false
+  register: hashed_custom_rate_operator_passwords
+  with_items:
+   - "{{ ripple_connect_users | selectattr('type', 'equalto', 'custom_rate_operator') | list }}"
+
+- name: "Hash Partner Passwords"
+  shell: node {{ ripple_solution_scripts_base }}/hash_password.js <<< '{{ item.username }}:RippleSolution:{{ item.password }}'
+  changed_when: false
+  register: hashed_partner_passwords
+  with_items:
+   - "{{ ripple_connect_partners | sum(attribute='partner_users', start=[]) | list }}"

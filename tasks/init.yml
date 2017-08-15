@@ -19,10 +19,12 @@
 
 - name: "Start Ripple Solution"
   service: name=ripple-solution state=started enabled=yes
+  register: ripple_solution_start
 
 - name: "Restart Ripple Solution"
   service: name=ripple-solution state=restarted
-  when:  config_files_status | changed or
+  when:  ripple_solution_start | changed or
+         config_files_status | changed or
          existing_certs_status | changed or
          created_certs_status | changed or
          ripple_solution_reset_db | default(False) | bool

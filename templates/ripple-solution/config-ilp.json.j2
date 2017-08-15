@@ -1,3 +1,6 @@
+{% macro write_encrypted_string(index) -%}
+{% if 'stdout' in encrypted_ilp_strings[index] %}{{ encrypted_ilp_strings[index].stdout }}{% else %}{{ existing_encrypted_ilp_strings[index].string }}{% endif %}
+{%- endmacro %}
 {
 {% if ripple_connect_enabled | bool %}
   "ripple-connect": {
@@ -12,14 +15,19 @@
   "ledger{{ loop.index0 }}": {
     "LEDGER_HOSTNAME": "{{ ledger.host }}",
     "LEDGER_PORT": {{ ledger.port }},
+{% if ripple_solution_encrypt_secrets | default(True) | bool %}
+    "ENCRYPTED_LEDGER_DB_URI": "{{ write_encrypted_string(ledgers_db_uri_idx + loop.index0) }}",
+    "ENCRYPTED_LEDGER_DB_URI_DECRYPTION_KEY": "{{ admin_key }}",
+{% else %}
     "LEDGER_DB_URI": "{{ ledger.db_string }}",
-    "LEDGER_TLS_KEY": "{{ key_path }}/{{ ledger.crt_prefix }}-key.pem",
-    "LEDGER_TLS_CERTIFICATE": "{{ cert_path }}/{{ ledger.crt_prefix }}-crt.pem",
+{% endif %}
     "LEDGER_ADMIN_FINGERPRINT": "{{ fingerprints.results[admin_crt_idx | int].stdout }}",
     "LEDGER_AMOUNT_SCALE": {{ ripple_connect_config.amount_decimal_scale }},
 {% for key, value in (ledger.config | default({})).iteritems() %}
     "LEDGER_{{ key | upper }}": "{{ value }}",
 {% endfor %}
+    "LEDGER_TLS_KEY": "{{ key_path }}/{{ ledger.crt_prefix }}-key.pem",
+    "LEDGER_TLS_CERTIFICATE": "{{ cert_path }}/{{ ledger.crt_prefix }}-crt.pem",
     "LEDGER_TLS_CAS": [
 {% for cert in ledger.trusted_external_certs | default([]) %}
       "{{ cert_ext_path }}/{{ cert }}",
@@ -34,12 +42,19 @@
   "validator": {
     "VALIDATOR_HOSTNAME": "{{ ilp_validator_host }}",
     "VALIDATOR_PORT": {{ ilp_validator_port }},
+{% if ripple_solution_encrypt_secrets | default(True) | bool %}
+    "ENCRYPTED_VALIDATOR_DB_URI": "{{ write_encrypted_string(ilp_validator_db_uri_idx) }}",
+    "ENCRYPTED_VALIDATOR_DB_URI_DECRYPTION_KEY": "{{ admin_key }}",
+    "ENCRYPTED_VALIDATOR_ED25519_SECRET_KEY": "{{ write_encrypted_string(ilp_validator_ed25519_secret_key_idx) }}",
+    "ENCRYPTED_VALIDATOR_ED25519_SECRET_KEY_DECRYPTION_KEY": "{{ admin_key }}",
+{% else %}
     "VALIDATOR_DB_URI": "{{ ilp_validator_info.db_string }}",
+    "VALIDATOR_ED25519_SECRET_KEY": "{{ validator_ed25519_secret_key }}",
+{% endif %}
+    "VALIDATOR_ED25519_PUBLIC_KEY": "{{ validator_ed25519_public_key }}",
 {% for key, value in (ilp_validator_config | default({})).iteritems() %}
     "VALIDATOR_{{ key | upper }}": "{{ value }}",
 {% endfor %}
-    "VALIDATOR_ED25519_PUBLIC_KEY": "{{ validator_key.stdout_lines[0].split(' ')[2] }}",
-    "VALIDATOR_ED25519_SECRET_KEY": "{{ validator_key.stdout_lines[1].split(' ')[2] }}",
     "VALIDATOR_TLS_KEY": "{{ key_path }}/{{ validator_crt_prefix }}-key.pem",
     "VALIDATOR_TLS_CERTIFICATE": "{{ cert_path }}/{{ validator_crt_prefix }}-crt.pem",
     "VALIDATOR_TLS_CAS": [
@@ -55,16 +70,21 @@
 {% if fx_connector_enabled | default(False) | bool %}
   "connector": {
     "CONNECTOR_PORT": {{ fx_connector_port }},
+{% if ripple_solution_encrypt_secrets | default(True) | bool %}
+    "ENCRYPTED_CONNECTOR_DB_URI": "{{ write_encrypted_string(fx_connector_db_uri_idx) }}",
+    "ENCRYPTED_CONNECTOR_DB_URI_DECRYPTION_KEY": "{{ admin_key }}",
+    "ENCRYPTED_CONNECTOR_QUOTE_HMAC_KEY": "{{ write_encrypted_string(fx_connector_quote_hmac_key_idx) }}",
+    "ENCRYPTED_CONNECTOR_QUOTE_HMAC_KEY_DECRYPTION_KEY": "{{ admin_key }}",
+{% else %}
     "CONNECTOR_DB_URI": "{{ fx_connector_info.db_string }}",
-    "CONNECTOR_TLS_KEY": "{{ key_path }}/{{ fx_connector_crt_prefix }}-key.pem",
-    "CONNECTOR_TLS_CERTIFICATE": "{{ cert_path }}/{{ fx_connector_crt_prefix }}-crt.pem",
+    "CONNECTOR_QUOTE_HMAC_KEY": "{{ connector_quote_hmac_key }}",
+{% endif %}
     "CONNECTOR_ADMIN_FINGERPRINT": "{{ fingerprints.results[admin_crt_idx | int].stdout }}",
 {% for key, value in (fx_connector_config | default({})).iteritems() %}
     "CONNECTOR_{{ key | upper }}": "{{ value }}",
 {% endfor %}
-{% for secret_result in connector_secrets.results %}
-    "{{ secret_result.item }}": "{{ secret_result.stdout.split(' ')[2] }}",
-{% endfor %}
+    "CONNECTOR_TLS_KEY": "{{ key_path }}/{{ fx_connector_crt_prefix }}-key.pem",
+    "CONNECTOR_TLS_CERTIFICATE": "{{ cert_path }}/{{ fx_connector_crt_prefix }}-crt.pem",
     "CONNECTOR_TLS_CAS": [
 {% for cert in fx_connector_trusted_external_certs | default([]) %}
       "{{ cert_ext_path }}/{{ cert }}",

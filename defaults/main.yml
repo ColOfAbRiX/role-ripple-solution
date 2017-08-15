@@ -20,6 +20,11 @@ ripple_solution_group: ripple_solution
 ripple_solution_reset_db: false
 ripple_solution_reset_crypto: false
 
+# If set to true, all passwords will be encrypted
+ripple_solution_encrypt_secrets: true
+# All passwords are displayed by Ansible because they are in the data structure.
+# Set this to true to disable their display
+ripple_solution_no_log: true
 
 #
 # Database

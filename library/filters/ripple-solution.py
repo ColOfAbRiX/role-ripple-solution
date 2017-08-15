@@ -77,9 +77,11 @@ def build_ripple_extra(value, rdbms='postgres', extra_vars={}):
     return value
 
 
-def list_encrypted_passwords(secrets_json):
+def list_encrypted_rc_passwords(secrets_json):
     """
-    Creates a list of encrypted passwords from the JSON loaded from secrets.json
+    Creates a list of encrypted passwords from the JSON loaded from secrets.json.
+    This is related to Ripple Connect.
+    The output sequence is: [database, rabbitmq, external credentials]
     """
     output = []
     try:
@@ -110,9 +112,11 @@ def list_encrypted_passwords(secrets_json):
     return output
 
 
-def list_clear_passwords(key, database=None, rmq=None, partners=[]):
+def list_clear_rc_passwords(key, database=None, rmq=None, partners=[]):
     """
-    Creates a list of cleartext passwords from the available data
+    Creates a list of cleartext passwords from the available data.
+    This is related to Ripple Connect.
+    The output sequence is: [database, rabbitmq, external_credentials...]
     """
     output =[]
 
@@ -129,14 +133,95 @@ def list_clear_passwords(key, database=None, rmq=None, partners=[]):
     return output
 
 
+def list_encrypted_ilp_passwords(config_ilp_json):
+    """
+    Creates a list of encrypted passwords from the JSON loaded from config-ilp.json
+    This is related to all other componets but Ripple Connect.
+    The output sequence is: [validator_db_uri, validator_ed25519_key, fx_connector_db_uri,
+    fx_connector_quote_hmac_key, ledgers_db_uri...]
+    """
+    output = []
+    try:
+        config_ilp_json = json.loads(config_ilp_json)
+    except:
+        config_ilp_json = {}
+
+    # Extract first level
+    ilp_validator = config_ilp_json.get('validator', {})
+    fx_connector = config_ilp_json.get('connector', {})
+    ilp_ledgers = []
+    for key in sorted([k for k in config_ilp_json.keys()]):
+        if key.startswith('ledger'):
+            ilp_ledgers.append(config_ilp_json[key])
+
+    # ILP Validator DB URI
+    output.append({
+        'key': ilp_validator.get('ENCRYPTED_VALIDATOR_DB_URI_DECRYPTION_KEY', ''),
+        'string': ilp_validator.get('ENCRYPTED_VALIDATOR_DB_URI', '')
+    })
+    # ILP Validator ED25519 secret key
+    output.append({
+        'key': ilp_validator.get('ENCRYPTED_VALIDATOR_ED25519_SECRET_KEY_DECRYPTION_KEY', ''),
+        'string': ilp_validator.get('ENCRYPTED_VALIDATOR_ED25519_SECRET_KEY', '')
+    })
+
+    # FX Connector DB URI
+    output.append({
+        'key': fx_connector.get('ENCRYPTED_CONNECTOR_DB_URI_DECRYPTION_KEY', ''),
+        'string': fx_connector.get('ENCRYPTED_CONNECTOR_DB_URI', '')
+    })
+    # FX Connector Quote HMAC key
+    output.append({
+        'key': fx_connector.get('ENCRYPTED_CONNECTOR_QUOTE_HMAC_KEY_DECRYPTION_KEY', ''),
+        'string': fx_connector.get('ENCRYPTED_CONNECTOR_QUOTE_HMAC_KEY', '')
+    })
+
+    # Ledgers DB URI
+    for ledger in ilp_ledgers:
+        output.append({
+            'key': ledger.get('ENCRYPTED_LEDGER_DB_URI_DECRYPTION_KEY', ''),
+            'string': ledger.get('ENCRYPTED_LEDGER_DB_URI', '')
+        })
+
+    return output
+
+
+def list_clear_ilp_passwords(key, ilpv_info, ilpv_ed25519, fxc_info, fxc_hmac, ledgers_info):
+    """
+    Creates a list of cleartext passwords from the available data.
+    This is related to all other componets but Ripple Connect.
+    The output sequence is: [validator_db_uri, validator_ed25519_key, fx_connector_db_uri,
+    fx_connector_quote_hmac_key, ledgers_db_uri...]
+    """
+    output = []
+
+    # ILP Validator DB URI
+    output.append({'key': key, 'string': ilpv_info['db_string']})
+    # ILP Validator ED25519 secret key
+    output.append({'key': key, 'string': ilpv_ed25519})
+
+    # ILP Validator DB URI
+    output.append({'key': key, 'string': fxc_info['db_string']})
+    # ILP Validator Quote HMAC key
+    output.append({'key': key, 'string': fxc_hmac})
+
+    # Ledgers DB URI
+    for ledger in ledgers_info:
+        output.append({'key': key, 'string': ledger['db_string']})
+
+    return output
+
+
 class FilterModule(object):
     """ Ansible jinja2 filters """
 
     def filters(self):
         return {
             'build_ripple_extra': build_ripple_extra,
-            'list_encrypted_passwords': list_encrypted_passwords,
-            'list_clear_passwords': list_clear_passwords
+            'list_encrypted_rc_passwords': list_encrypted_rc_passwords,
+            'list_clear_rc_passwords': list_clear_rc_passwords,
+            'list_encrypted_ilp_passwords': list_encrypted_ilp_passwords,
+            'list_clear_ilp_passwords': list_clear_ilp_passwords
         }
 
 # vim: ft=python:ts=4:sw=4
