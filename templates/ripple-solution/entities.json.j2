@@ -1,5 +1,5 @@
 {
-    "domain": "{{ ansible_fqdn }}:{{ ripple_connect_port }}",
+    "domain": "{{ ripple_connect_info.host }}:{{ ripple_connect_info.port }}",
 
     "known_remotes": [
 {% for item in ripple_connect_partners %}

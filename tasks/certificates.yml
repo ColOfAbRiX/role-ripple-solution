@@ -117,7 +117,7 @@
      -sha256 -new \
      -key "{{ key_path }}/{{ item.crt_prefix }}-key.pem" \
      -out "{{ csr_path }}/{{ item.crt_prefix }}-csr.pem" \
-     -subj "/CN={{ ansible_fqdn }}"
+     -subj "/CN={{ item.host | default(ansible_fqdn) }}"
   args:
     creates: "{{ cert_path }}/{{ item.crt_prefix }}-crt.pem"
   environment:

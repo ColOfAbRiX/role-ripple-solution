@@ -14,7 +14,7 @@
 - name: "Create Accounts"
   shell: |
     {{ ripple_solution_scripts_base }}/rs_requests.sh \
-        "{{ ledger.url }}/account" \
+        "{{ ledger.host_data.url }}/account" \
         --method PUT \
         --cert "{{ admin_cert }}" \
         --key "{{ admin_key }}" \
@@ -27,5 +27,8 @@
         }"
   when: item.enabled | default(True)
   register: result
+  failed_when: result.rc != 0 and
+               'UnmodifiableResourceError' not in result.stderr
+  changed_when: result.rc == 0
   with_items:
    - "{{ (ilp_ledgers_accounts + ledger.accounts) | list }}"

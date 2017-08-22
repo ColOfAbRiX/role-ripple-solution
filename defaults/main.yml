@@ -128,6 +128,11 @@ ripple_connect_connector_validator_pairs: []
 # to true will configure the other components to use this Ripple Connect instance
 ripple_connect_install_local: true
 
+# Instead of building the URL from the given service parameters use this one (it
+# is useful when the component is being load balanced and the URL is provided by
+# the load balancer)
+ripple_connect_use_url: ''
+
 # Users of Ripple Connect
 ripple_connect_users:
  - username: consumer_operator
@@ -145,6 +150,16 @@ ripple_connect_ledger_user: transact
 
 # RabbitMQ configuration to push messages
 ripple_connect_rabbitmq: {}
+#  mq_uri: amqp://rabbit_server.example.com
+#  mq_username: ripple_connect
+#  mq_password: Passw0rd
+#  mq_exchange: exchange.ripple.push-notifications
+#  mq_accept_quote_routing_key: rk.ripple.quote.accept
+#  mq_lock_quote_routing_key: rk.ripple.quote.lock
+#  mq_settlement_executed_routing_key: rk.ripple.settlement_executed
+#  mq_payment_succeeded_routing_key: rk.ripple.payment.succeeded
+#  mq_fail_payment_routing_key: rk.ripple.payment.failed
+
 
 # Ripple Connect specific configuration
 ripple_connect_secrets_encrypted: "false"
@@ -233,6 +248,11 @@ ilp_ledgers: []
 #   #   fingerprint:   '46:0F:D7:68:B6:DA:4A:63:DE:DD:C6:00:00:54:BD:EE:6A:DB:6B:E1:89:FA:C2:27:1D:5B:AC:4B:50:18:50:1C'
 #   #   notifications: 'https://provider.example.com:5000/ledger/notifications'
 #
+#   # Instead of building the URL from the given service parameters use this one
+#   # (it is useful when the component is being load balanced and the URL is
+#   # provided by the load balancer)
+#   use_url: ''
+#
 #   # Ledger configuration
 #   config:
 #     log_level: info
@@ -279,6 +299,11 @@ fx_connector_pairs: []
 # to true will configure the other components to use this FX Connector instance
 fx_connector_install_local: true
 
+# Instead of building the URL from the given service parameters use this one (it
+# is useful when the component is being load balanced and the URL is provided by
+# the load balancer)
+fx_connector_use_url: ''
+
 # Name of the FX Connector account on the Ledgers
 fx_connector_ledger_user: connector
 
@@ -318,6 +343,11 @@ ilp_validator_trusted_external_certs: []
 # If other Ripple Solution components are present on the machine, setting this
 # to true will configure the other components to use this ILP Validator instance
 ilp_validator_install_local: true
+
+# Instead of building the URL from the given service parameters use this one (it
+# is useful when the component is being load balanced and the URL is provided by
+# the load balancer)
+ilp_validator_use_url: ''
 
 # ILP Validator configuration
 ilp_validator_config: {}

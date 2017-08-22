@@ -17,6 +17,7 @@
       db_admin_pass:  "{{ ripple_connect_db_admin_pass }}"
       db_sql_file:    ripple-connect.sql
       db_check_table: public.db_schema_versions
+      use_url:        "{{ ripple_connect_use_url | default('') }}"
       config:         "{{ ripple_connect_config }}"
       crt_prefix:     "{{ ripple_connect_crt_prefix }}"
       health_query:   ''
@@ -37,6 +38,7 @@
       db_admin_pass:  "{{ ilp_validator_db_admin_pass }}"
       db_sql_file:    validator.sql
       db_check_table: public.n_db_schema_versions
+      use_url:        "{{ ilp_validator_use_url | default('') }}"
       config:         "{{ ilp_validator_config }}"
       crt_prefix:     "{{ validator_crt_prefix }}"
       health_query:   '/health'
@@ -57,6 +59,7 @@
       db_admin_pass:  "{{ fx_connector_db_admin_pass }}"
       db_sql_file:    connector.sql
       db_check_table: public.c_db_schema_versions
+      use_url:        "{{ fx_connector_use_url | default('') }}"
       config:         "{{ fx_connector_config }}"
       crt_prefix:     "{{ fx_connector_crt_prefix }}"
       health_query:   '/health'
@@ -70,6 +73,11 @@
       crt_prefix:     "{{ ledger_crt_prefix }}"
       health_query:   '/health'
       health_json:    '"status": *"OK"'
+
+# NOTE: The various filter manipulate the various *_info_tmp dictionaries either
+# by building new values or changing existing ones. Refer to the end results
+# outputted and the end of this file or to the filters inside
+# <role>/library/filters/ripple-solution.py for more information.
 
 - name: "Build Temporary Datastructures"
   set_fact:
@@ -115,3 +123,6 @@
     admin_key:  "{{ key_path }}/{{ ripple_solution_admin_crt_prefix }}-key.pem"
     admin_crt_idx: "{{ ripple_solution_info | length }}"
     cert_items: "{{ (ripple_solution_info + [{'crt_prefix': ripple_solution_admin_crt_prefix, 'enabled': True}]) | list }}"
+
+- name: "Ripple Solution Information"
+  debug: var=ripple_solution_info

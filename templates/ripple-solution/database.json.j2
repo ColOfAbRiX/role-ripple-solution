@@ -5,7 +5,7 @@
   "database": "{{ ripple_connect_db_name }}"{% if ripple_connect_rabbitmq | default({}) %},
 
   "rabbitmq_config": {
-{% for key, value in (ripple_connect_rabbitmq | default({})).iteritems() %}
+{% for key, value in (ripple_connect_rabbitmq | default({})).iteritems() if key not in ['mq_password', 'mq_username'] %}
     "{{ key }}": "{{ value }}"{% if not loop.last %},{% endif %}
 
 {% endfor %}

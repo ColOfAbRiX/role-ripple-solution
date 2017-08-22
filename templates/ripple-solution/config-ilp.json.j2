@@ -1,12 +1,23 @@
 {% macro write_encrypted_string(index) -%}
 {% if 'stdout' in encrypted_ilp_strings[index] %}{{ encrypted_ilp_strings[index].stdout }}{% else %}{{ existing_encrypted_ilp_strings[index].string }}{% endif %}
 {%- endmacro %}
+{% macro host_map() -%}
+    "HOST_MAP": {
+{% for item in ripple_solution_info %}
+{% if item.use_url | default('') != '' %}
+      "{{ item.address }}": "{{ item.host_data.address }}"{% if not loop.last %},{% endif %}
+
+{% endif %}
+{% endfor %}
+    }
+{%- endmacro %}
 {
 {% if ripple_connect_enabled | bool %}
   "ripple-connect": {
     "RC_CONFIGS_PATH": "{{ ripple_solution_config_base }}",
     "RC_SECRETS_ENCRYPTED": {{ ripple_connect_secrets_encrypted }},
-    "RC_ENABLE_UI": {{ ripple_connect_enable_ui }}
+    "RC_ENABLE_UI": {{ ripple_connect_enable_ui }},
+    {{ host_map() }}
   }{% if ilp_ledgers_info | default([]) or ilp_validator_info.enabled or fx_connector_info.enabled %},{% endif %}
 
 
@@ -33,15 +44,16 @@
       "{{ cert_ext_path }}/{{ cert }}",
 {% endfor %}
       "{{ ca_cert }}"
-    ]
+    ],
+    {{ host_map() }}
   }{% if not loop.last or ilp_validator_info.enabled or fx_connector_info.enabled %},{% endif %}
 
 
 {% endfor %}
 {% if ilp_validator_enabled | default(False) | bool %}
   "validator": {
-    "VALIDATOR_HOSTNAME": "{{ ilp_validator_host }}",
-    "VALIDATOR_PORT": {{ ilp_validator_port }},
+    "VALIDATOR_HOSTNAME": "{{ ilp_validator_info.host }}",
+    "VALIDATOR_PORT": {{ ilp_validator_info.port }},
 {% if ripple_solution_encrypt_secrets | default(True) | bool %}
     "ENCRYPTED_VALIDATOR_DB_URI": "{{ write_encrypted_string(ilp_validator_db_uri_idx) }}",
     "ENCRYPTED_VALIDATOR_DB_URI_DECRYPTION_KEY": "{{ admin_key }}",
@@ -62,14 +74,15 @@
       "{{ cert_ext_path }}/{{ cert }}",
 {% endfor %}
       "{{ ca_cert }}"
-    ]
+    ],
+    {{ host_map() }}
   }{% if fx_connector_info.enabled %},{% endif %}
 
 
 {% endif %}
 {% if fx_connector_enabled | default(False) | bool %}
   "connector": {
-    "CONNECTOR_PORT": {{ fx_connector_port }},
+    "CONNECTOR_PORT": {{ fx_connector_info.port }},
 {% if ripple_solution_encrypt_secrets | default(True) | bool %}
     "ENCRYPTED_CONNECTOR_DB_URI": "{{ write_encrypted_string(fx_connector_db_uri_idx) }}",
     "ENCRYPTED_CONNECTOR_DB_URI_DECRYPTION_KEY": "{{ admin_key }}",
@@ -134,7 +147,8 @@
       ]{% if not loop.last %},{% endif %}
 
 {% endfor %}
-    ]
+    ],
+    {{ host_map() }}
   }
 {% endif %}
 }

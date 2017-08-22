@@ -6,7 +6,9 @@
 
 import six
 import json
+from urlparse import urlparse
 from distutils.util import strtobool
+
 
 def build_ripple_extra(value, rdbms='postgres', extra_vars={}):
     """
@@ -46,6 +48,29 @@ def build_ripple_extra(value, rdbms='postgres', extra_vars={}):
 
     # Full URL
     value['url'] = "%s://%s" % (service_protocol, service_address)
+
+    # Data specific to the host and not the service endpoint which can be
+    # different (See the attribute use_url)
+    value['host_data'] = {
+       'use_https': value['use_https'],
+       'protocol': value['protocol'],
+       'host': value['host'],
+       'port': value['port'],
+       'address': value['address'],
+       'url': value['url']
+    }
+
+    # Using a given URL
+    if value.get('use_url', '') != '':
+        url = urlparse(value['use_url'])
+        value.update({
+           'use_https': (url.scheme == 'https'),
+           'protocol': url.scheme,
+           'host': url.hostname,
+           'port': url.port,
+           'address': url.netloc,
+           'url': value['use_url']
+        })
 
     # DB string
     db_string = "%s://%s:%s@%s:%s/%s" % (
