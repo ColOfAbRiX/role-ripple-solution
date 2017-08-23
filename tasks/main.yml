@@ -15,6 +15,7 @@
   no_log: "{{ ripple_solution_no_log | default(True) | bool }}"
   tags: ripple-solution
 
+
 # Some data structures are build and used to access information using loops and
 # other efficient methods.
 - name: "Build Data Structures"
@@ -22,11 +23,13 @@
   no_log: "{{ ripple_solution_no_log | default(True) | bool }}"
   tags: [always, ripple-solution]
 
+
 # Repository and package installation
 - name: "Install Ripple Solution"
   include: install.yml
   no_log: "{{ ripple_solution_no_log | default(True) | bool }}"
   tags: ripple-solution
+
 
 # To reset all the databases
 - name: "Cleanup DB"
@@ -34,6 +37,10 @@
   include: "{{ ripple_solution_db_dialect }}_clean.yml"
   when: ripple_solution_reset_db | default(False) | bool
   no_log: "{{ ripple_solution_no_log | default(True) | bool }}"
+  with_items:
+   - "{{ ripple_solution_info }}"
+  loop_control:
+    loop_var: component
   tags: ripple-solution
 
 # Pre-steps to configure the chosen RDBMS
@@ -41,6 +48,12 @@
   delegate_to: localhost
   include: "{{ ripple_solution_db_dialect }}_pre.yml"
   no_log: "{{ ripple_solution_no_log | default(True) | bool }}"
+  when: component.enabled | default(False) | bool and
+        component.cluster_run
+  with_items:
+   - "{{ ripple_solution_info }}"
+  loop_control:
+    loop_var: component
   tags: ripple-solution
 
 # Creation of the databases and their objects
@@ -54,7 +67,14 @@
   delegate_to: localhost
   include: "{{ ripple_solution_db_dialect }}_post.yml"
   no_log: "{{ ripple_solution_no_log | default(True) | bool }}"
+  when: component.enabled | default(False) | bool and
+        component.cluster_run
+  with_items:
+   - "{{ ripple_solution_info }}"
+  loop_control:
+    loop_var: component
   tags: ripple-solution
+
 
 # Installs or create certificates and manage the file system permissions
 - name: "Create Certificates"
@@ -68,6 +88,7 @@
   no_log: "{{ ripple_solution_no_log | default(True) | bool }}"
   tags: ripple-solution
 
+
 # Create the configuration files
 - name: "Ripple Configuration"
   become_user: "{{ ripple_solution_user }}"
@@ -75,15 +96,19 @@
   no_log: "{{ ripple_solution_no_log | default(True) | bool }}"
   tags: ripple-solution
 
+
 # Configure the systemd and initialize the Ripple Solution services
 - name: "Initialization"
   include: init.yml
+  when: ripple_solution_enabled | default(True) | bool
   no_log: "{{ ripple_solution_no_log | default(True) | bool }}"
   tags: ripple-solution
+
 
 # Create the accounts on the system
 - name: "Ledger Accounts"
   include: accounts.yml
+  when: ripple_solution_enabled | default(True) | bool
   with_items:
    - "{{ ilp_ledgers_info | default([]) }}"
   loop_control:

@@ -184,7 +184,7 @@
    - "{{ secret_key_files }}"
 
 - name: "Create Ed25519 Keys"
-  shell: node {{ ripple_solution_scripts_base }}/ed25519_key_pair_generator.j2 > {{ pia_path }}/{{ item.name }}.pia
+  shell: node {{ ripple_solution_scripts_base }}/ed25519_key_pair_generator.js > {{ pia_path }}/{{ item.name }}.pia
   args:
     creates: "{{ pia_path }}/{{ item.name }}.pia"
   when: item.enabled

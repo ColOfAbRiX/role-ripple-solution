@@ -2,61 +2,56 @@
 
 - name: "Stop Ripple Solution"
   service: name=ripple-solution state=stopped
+  register: stop_ripple_solution
   ignore_errors: yes
 
-- name: "Wait for all Services to Stop"
+- name: "Wait for all Services to Stop - {{ component.name }}"
   wait_for:
     state: stopped
     timeout: 10
-    host: "{{ item.host }}"
-    port: "{{ item.port }}"
-  when: item.enabled
-  with_items:
-   - "{{ ripple_solution_info }}"
+    host: "{{ component.host_data.host }}"
+    port: "{{ component.host_data.port }}"
+  when: "component.enabled and
+        'Could not find the requested service' not in stop_ripple_solution.msg"
 
-- name: "Remove User Privileges"
+- name: "Remove User Privileges - {{ component.name }}"
   postgresql_privs:
-    login_host:      "{{ item.0.db_host }}"
-    login_user:      "{{ item.0.db_admin_user }}"
-    login_password:  "{{ item.0.db_admin_pass }}"
-    port:            "{{ item.0.db_port }}"
-    db:              "{{ item.0.db_name }}"
-    role:            "{{ item.0.db_user }}"
-    type:            "{{ item.1.type }}"
-    schema:          "{{ item.1.schema | default(omit) }}"
-    priv:            "{{ item.1.priv }}"
-    objs:            "{{ item.1.objs }}"
+    login_host:      "{{ component.db_host }}"
+    login_user:      "{{ component.db_admin_user }}"
+    login_password:  "{{ component.db_admin_pass }}"
+    port:            "{{ component.db_port }}"
+    db:              "{{ component.db_name }}"
+    role:            "{{ component.db_user }}"
+    type:            "{{ item.type }}"
+    schema:          "{{ item.schema | default(omit) }}"
+    priv:            "{{ item.priv }}"
+    objs:            "{{ item.objs }}"
     state:           absent
   ignore_errors: yes
-  when: item.0.enabled | default(False) | bool
-  with_nested:
-   - "{{ ripple_solution_info }}"
+  when: component.enabled | default(False) | bool
+  with_items:
    - "{{ ripple_solution_db_user_privileges }}"
 
-- name: "Remove Users"
+- name: "Remove Users - {{ component.name }}"
   postgresql_user:
-    login_host: "{{ item.db_host }}"
-    login_user: "{{ item.db_admin_user }}"
-    login_password: "{{ item.db_admin_pass }}"
-    port:       "{{ item.db_port }}"
-    name:       "{{ item.db_user }}"
-    db:         "{{ item.db_name }}"
+    login_host: "{{ component.db_host }}"
+    login_user: "{{ component.db_admin_user }}"
+    login_password: "{{ component.db_admin_pass }}"
+    port:       "{{ component.db_port }}"
+    name:       "{{ component.db_user }}"
+    db:         "{{ component.db_name }}"
     priv:       ALL
     state:      absent
   ignore_errors: yes
-  when: item.enabled | default(False) | bool
-  with_items:
-   - "{{ ripple_solution_info }}"
+  when: component.enabled | default(False) | bool
 
-- name: "Remove Databases"
+- name: "Remove Databases - {{ component.name }}"
   postgresql_db:
-    login_host: "{{ item.db_host }}"
-    login_user: "{{ item.db_admin_user }}"
-    login_password: "{{ item.db_admin_pass }}"
-    port:       "{{ item.db_port }}"
-    name:       "{{ item.db_name }}"
+    login_host: "{{ component.db_host }}"
+    login_user: "{{ component.db_admin_user }}"
+    login_password: "{{ component.db_admin_pass }}"
+    port:       "{{ component.db_port }}"
+    name:       "{{ component.db_name }}"
     state:      absent
   ignore_errors: yes
-  when: item.enabled | default(False) | bool
-  with_items:
-   - "{{ ripple_solution_info }}"
+  when: component.enabled | default(False) | bool

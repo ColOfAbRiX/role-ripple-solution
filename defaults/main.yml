@@ -5,6 +5,8 @@
 # General Configuration
 #
 
+ripple_solution_enabled: true
+
 # Ripple Paths
 ripple_solution_base:         /opt/ripple-solution
 ripple_solution_config_base:  "{{ ripple_solution_base }}/config"
@@ -81,6 +83,7 @@ ripple_solution_use_remote_certs: []
 ripple_connect_enabled: false
 ripple_connect_port:    5000
 ripple_connect_host:    "{{ ansible_fqdn }}"
+ripple_connect_cluster_members: ["{{ ansible_fqdn }}"]
 
 # Database setup
 ripple_connect_db_host: ''
@@ -211,6 +214,7 @@ ripple_connect_config: {}
 #
 
 # List of ILP Ledgers on the machine
+ilp_ledgers_cluster_members: ["{{ ansible_fqdn }}"]
 ilp_ledgers: []
 #   # Service
 # - name: ledger_euro
@@ -268,6 +272,7 @@ ilp_ledgers: []
 fx_connector_enabled: no
 fx_connector_port: 3000
 fx_connector_host: "{{ ansible_fqdn }}"
+fx_connector_cluster_members: ["{{ ansible_fqdn }}"]
 
 # Database
 fx_connector_db_host: ''
@@ -326,6 +331,7 @@ fx_connector_config: {}
 ilp_validator_enabled: no
 ilp_validator_port: 4000
 ilp_validator_host: "{{ ansible_fqdn }}"
+ilp_validator_cluster_members: ["{{ ansible_fqdn }}"]
 
 # Database
 ilp_validator_db_host: ''

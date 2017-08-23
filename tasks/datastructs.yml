@@ -3,11 +3,17 @@
 - name: "Aggregate Data"
   set_fact:
     ripple_connect_info_tmp:
+      # General info
       name:           ripple_connect
       description:    Ripple Connect
+      # Tells if the component is enabled. It's always a boolean value
       enabled:        "{{ ripple_connect_enabled | default(False) | bool }}"
+      # Used to run tasks only once per cluster. This will be true only on one of the nodes
+      cluster_run:    "{{ (ripple_connect_cluster_members | default([ansible_hostname]) | sort | first == ansible_hostname) | bool }}"
+      # General info
       port:           "{{ ripple_connect_port }}"
       host:           "{{ ripple_connect_host }}"
+      # Database info
       db_host:        "{{ ripple_connect_db_host }}"
       db_port:        "{{ ripple_connect_db_port }}"
       db_user:        "{{ ripple_connect_db_user }}"
@@ -15,20 +21,32 @@
       db_name:        "{{ ripple_connect_db_name }}"
       db_admin_user:  "{{ ripple_connect_db_admin_user }}"
       db_admin_pass:  "{{ ripple_connect_db_admin_pass }}"
+      # What SQL initializes the DB
       db_sql_file:    ripple-connect.sql
+      # What table to check to determine if the DB is initialized
       db_check_table: public.db_schema_versions
+      # Override URL usually used as public interface
       use_url:        "{{ ripple_connect_use_url | default('') }}"
       config:         "{{ ripple_connect_config }}"
+      # Prefix for the file names of certificates
       crt_prefix:     "{{ ripple_connect_crt_prefix }}"
+      # URI query to check for the health of the service
       health_query:   ''
+      # What to check for in the answer to determine the health
       health_json:    '"version": *"[0-9]+\.[0-9]+\.[0-9]+"'
 
     ilp_validator_info_tmp:
+      # General info
       name:           ilp_validator
       description:    ILP Validator
+      # Tells if the component is enabled. It's always a boolean value
       enabled:        "{{ ilp_validator_enabled | default(False) | bool }}"
+      # Used to run tasks only once per cluster. This will be true only on one of the nodes
+      cluster_run:    "{{ (ilp_validator_cluster_members | default([ansible_hostname]) | sort | first == ansible_hostname) | bool }}"
+      # General info
       port:           "{{ ilp_validator_port }}"
       host:           "{{ ilp_validator_host }}"
+      # Database info
       db_host:        "{{ ilp_validator_db_host }}"
       db_port:        "{{ ilp_validator_db_port }}"
       db_user:        "{{ ilp_validator_db_user }}"
@@ -36,20 +54,32 @@
       db_name:        "{{ ilp_validator_db_name }}"
       db_admin_user:  "{{ ilp_validator_db_admin_user }}"
       db_admin_pass:  "{{ ilp_validator_db_admin_pass }}"
+      # What SQL initializes the DB
       db_sql_file:    validator.sql
+      # What table to check to determine if the DB is initialized
       db_check_table: public.n_db_schema_versions
+      # Override URL usually used as public interface
       use_url:        "{{ ilp_validator_use_url | default('') }}"
       config:         "{{ ilp_validator_config }}"
+      # Prefix for the file names of certificates
       crt_prefix:     "{{ validator_crt_prefix }}"
+      # URI query to check for the health of the service
       health_query:   '/health'
+      # What to check for in the answer to determine the health
       health_json:    '"status": *"OK"'
 
     fx_connector_info_tmp:
+      # General info
       name:           fx_connector
       description:    FX Connector
+      # Tells if the component is enabled. It's always a boolean value
       enabled:        "{{ fx_connector_enabled | default(False) | bool }}"
+      # Used to run tasks only once per cluster. This will be true only on one of the nodes
+      cluster_run:    "{{ (fx_connector_cluster_members | default([ansible_hostname]) | sort | first == ansible_hostname) | bool }}"
+      # General info
       port:           "{{ fx_connector_port }}"
       host:           "{{ fx_connector_host }}"
+      # Database info
       db_host:        "{{ fx_connector_db_host }}"
       db_port:        "{{ fx_connector_db_port }}"
       db_user:        "{{ fx_connector_db_user }}"
@@ -57,30 +87,47 @@
       db_name:        "{{ fx_connector_db_name }}"
       db_admin_user:  "{{ fx_connector_db_admin_user }}"
       db_admin_pass:  "{{ fx_connector_db_admin_pass }}"
+      # What SQL initializes the DB
       db_sql_file:    connector.sql
+      # What table to check to determine if the DB is initialized
       db_check_table: public.c_db_schema_versions
+      # Override URL usually used as public interface
       use_url:        "{{ fx_connector_use_url | default('') }}"
       config:         "{{ fx_connector_config }}"
+      # Prefix for the file names of certificates
       crt_prefix:     "{{ fx_connector_crt_prefix }}"
+      # URI query to check for the health of the service
       health_query:   '/health'
+      # What to check for in the answer to determine the health
       health_json:    '"status": *"OK"'
 
     ilp_ledgers_extra_vars:
+      # General info
       name:           ilp_ledger
       description:    ILP Ledger
+      # Tells if the component is enabled. It's always a boolean value
+      #enabled:        true
+      # Used to run tasks only once per cluster. This will be true only on one of the nodes
+      cluster_run:    "{{ (ilp_ledgers_cluster_members | default([ansible_hostname]) | sort | first == ansible_hostname) | bool }}"
+      # What SQL initializes the DB
       db_sql_file:    ledger.sql
+      # What table to check to determine if the DB is initialized
       db_check_table: public.l_db_schema_versions
+      # Prefix for the file names of certificates
       crt_prefix:     "{{ ledger_crt_prefix }}"
+      # URI query to check for the health of the service
       health_query:   '/health'
+      # What to check for in the answer to determine the health
       health_json:    '"status": *"OK"'
 
 # NOTE: The various filter manipulate the various *_info_tmp dictionaries either
-# by building new values or changing existing ones. Refer to the end results
-# outputted and the end of this file or to the filters inside
+# by building new values or changing existing ones. Refer to the end results that
+# are displayed at the end of this file or to the python filter inside
 # <role>/library/filters/ripple-solution.py for more information.
 
 - name: "Build Temporary Datastructures"
   set_fact:
+    # Full information for the components split in different variables
     ripple_connect_info: "{{ ripple_connect_info_tmp | build_ripple_extra(ripple_solution_db_dialect) }}"
     ilp_validator_info:  "{{ ilp_validator_info_tmp | build_ripple_extra(ripple_solution_db_dialect) }}"
     fx_connector_info:   "{{ fx_connector_info_tmp | build_ripple_extra(ripple_solution_db_dialect) }}"
@@ -88,12 +135,15 @@
 
 - name: "Build Final Datastructures"
   set_fact:
+    # Locations in the below list of the information of each component
     ripple_connect_idx:   0
     ilp_validator_idx:    1
     fx_connector_idx:     2
     ilp_ledgers_base_idx: 3
     ilp_ledgers_count:    "{{ ilp_ledgers | length }}"
+    # List containing all the configuration of the components
     ripple_solution_info: "{{ ([ripple_connect_info, ilp_validator_info, fx_connector_info] + ilp_ledgers_info) | list }}"
+    # List of privileges to grant to the DB users
     ripple_solution_db_user_privileges:
      - type: schema
        priv: USAGE
@@ -109,6 +159,7 @@
 
 - name: "Crypto Paths"
   set_fact:
+    # Directories for cryptographic files
     cert_path: "{{ ripple_solution_cert_base }}/crt"
     key_path:  "{{ ripple_solution_cert_base }}/key"
     csr_path:  "{{ ripple_solution_cert_base }}/csr"
@@ -117,6 +168,7 @@
 
 - name: "Common Certificates Name"
   set_fact:
+    # Full path and file name of the most common certificstes
     ca_cert:    "{{ cert_path }}/{{ ripple_solution_ca_prefix }}.crt"
     ca_key:     "{{ key_path }}/{{ ripple_solution_ca_prefix }}.key"
     admin_cert: "{{ cert_path }}/{{ ripple_solution_admin_crt_prefix }}-crt.pem"

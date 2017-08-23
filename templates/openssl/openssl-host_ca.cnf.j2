@@ -21,7 +21,7 @@ default_md             = sha256
 x509_extensions        = v3_ca
 
 [req_distinguished_name]
-commonName             = Host CA - {{ ansible_fqdn }}
+commonName             = {{ openssl_organizationName }} - Ripple Solution Root CA
 organizationName       = {{ openssl_organizationName }}
 organizationalUnitName = {{ openssl_organizationalUnitName }}
 localityName           = {{ openssl_localityName }}

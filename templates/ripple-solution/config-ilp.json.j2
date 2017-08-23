@@ -138,13 +138,8 @@
     },
     "CONNECTOR_PAIRS": [
 {% for pair in fx_connector_pairs | default([]) %}
-      [
-        "{{ pair[0] }}",
-        "{{ pair[1] }}"
-      ], [
-        "{{ pair[1] }}",
-        "{{ pair[0] }}"
-      ]{% if not loop.last %},{% endif %}
+      ["{{ pair[0] }}", "{{ pair[1] }}"],
+      ["{{ pair[1] }}", "{{ pair[0] }}"]{% if not loop.last %},{% endif %}
 
 {% endfor %}
     ],

@@ -45,3 +45,20 @@
   with_items:
    - src:  opt/ripple-solution/scripts/decrypt_string.js
      dest: "{{ ripple_solution_scripts_base }}/decrypt_string.js"
+
+- name: "Install Systemd Unit"
+  copy:
+    src:    etc/systemd/system/ripple-solution.service
+    dest:   /etc/systemd/system/ripple-solution.service
+    mode:   '0644'
+    force:  yes
+    owner:  root
+    group:  root
+    seuser: system_u
+    serole: object_r
+    setype: systemd_unit_file_t
+  register: systemd_ripple
+
+- name: "Update Systemd"
+  command: systemctl daemon-reload
+  when: systemd_ripple | changed
