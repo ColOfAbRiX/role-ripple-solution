@@ -93,8 +93,8 @@
   when: new_root_ca_status | changed
   with_nested:
    - "{{ cert_items }}"
-   - - { path: "{{ key_path }}",  postfix: '-key.pem' }
-     - { path: "{{ cert_path }}", postfix: '-crt.pem' }
+   - - { path: "{{ key_path }}",  postfix: '.key' }
+     - { path: "{{ cert_path }}", postfix: '.crt' }
 
 
 #
@@ -102,9 +102,9 @@
 #
 
 - name: "Create Private Key"
-  shell: openssl genrsa -out "{{ key_path }}/{{ item.crt_prefix }}-key.pem" 2048
+  shell: openssl genrsa -out "{{ key_path }}/{{ item.crt_prefix }}.key" 2048
   args:
-    creates: "{{ key_path }}/{{ item.crt_prefix }}-key.pem"
+    creates: "{{ key_path }}/{{ item.crt_prefix }}.key"
   environment:
     OPENSSL_CONF: "{{ ripple_solution_config_base }}/openssl-cert.cnf"
   when: item.enabled
@@ -115,11 +115,11 @@
   shell: |
     openssl req \
      -sha256 -new \
-     -key "{{ key_path }}/{{ item.crt_prefix }}-key.pem" \
+     -key "{{ key_path }}/{{ item.crt_prefix }}.key" \
      -out "{{ csr_path }}/{{ item.crt_prefix }}-csr.pem" \
      -subj "/CN={{ item.host | default(ansible_fqdn) }}"
   args:
-    creates: "{{ cert_path }}/{{ item.crt_prefix }}-crt.pem"
+    creates: "{{ cert_path }}/{{ item.crt_prefix }}.crt"
   environment:
     OPENSSL_CONF: "{{ ripple_solution_config_base }}/openssl-cert.cnf"
   when: item.enabled
@@ -134,9 +134,9 @@
       -CA "{{ ca_cert }}" \
       -CAkey "{{ ca_key }}" \
       -CAcreateserial \
-      -out "{{ cert_path }}/{{ item.crt_prefix }}-crt.pem"
+      -out "{{ cert_path }}/{{ item.crt_prefix }}.crt"
   args:
-    creates: "{{ cert_path }}/{{ item.crt_prefix }}-crt.pem"
+    creates: "{{ cert_path }}/{{ item.crt_prefix }}.crt"
   environment:
     OPENSSL_CONF: "{{ ripple_solution_config_base }}/openssl-cert.cnf"
   register: created_certs_status
@@ -152,7 +152,7 @@
 - name: "Certificate Fingerprints"
   shell: |
     openssl x509 \
-      -in "{{ cert_path }}/{{ item.crt_prefix }}-crt.pem" \
+      -in "{{ cert_path }}/{{ item.crt_prefix }}.crt" \
       -noout \
       -fingerprint -sha256 | \
       awk -F'=' '{ print $2 }' > {{ cert_path }}/{{ item.crt_prefix }}.fpt
@@ -213,7 +213,7 @@
   file: path="{{ ca_key }}" mode="0400"
 
 - name: "Other Keys Permissions"
-  file: path="{{ key_path }}/{{ item.crt_prefix }}-key.pem" mode="0400"
+  file: path="{{ key_path }}/{{ item.crt_prefix }}.key" mode="0400"
   when: item.enabled
   with_items:
    - "{{ cert_items }}"

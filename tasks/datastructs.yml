@@ -171,8 +171,8 @@
     # Full path and file name of the most common certificstes
     ca_cert:    "{{ cert_path }}/{{ ripple_solution_ca_prefix }}.crt"
     ca_key:     "{{ key_path }}/{{ ripple_solution_ca_prefix }}.key"
-    admin_cert: "{{ cert_path }}/{{ ripple_solution_admin_crt_prefix }}-crt.pem"
-    admin_key:  "{{ key_path }}/{{ ripple_solution_admin_crt_prefix }}-key.pem"
+    admin_cert: "{{ cert_path }}/{{ ripple_solution_admin_crt_prefix }}.crt"
+    admin_key:  "{{ key_path }}/{{ ripple_solution_admin_crt_prefix }}.key"
     admin_crt_idx: "{{ ripple_solution_info | length }}"
     cert_items: "{{ (ripple_solution_info + [{'crt_prefix': ripple_solution_admin_crt_prefix, 'enabled': True}]) | list }}"
 

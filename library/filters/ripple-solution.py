@@ -95,8 +95,8 @@ def build_ripple_extra(value, rdbms='postgres', extra_vars={}):
     value['db_admin_string'] = db_admin_string
 
     # SSL certs names
-    value['crt_file'] = "%s-crt.pem" % value['crt_prefix']
-    value['key_file'] = "%s-key.pem" % value['crt_prefix']
+    value['crt_file'] = "%s.crt" % value['crt_prefix']
+    value['key_file'] = "%s.key" % value['crt_prefix']
 
     # Return
     return value

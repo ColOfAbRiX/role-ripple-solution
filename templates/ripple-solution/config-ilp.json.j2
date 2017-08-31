@@ -37,8 +37,8 @@
 {% for key, value in (ledger.config | default({})).iteritems() %}
     "LEDGER_{{ key | upper }}": "{{ value }}",
 {% endfor %}
-    "LEDGER_TLS_KEY": "{{ key_path }}/{{ ledger.crt_prefix }}-key.pem",
-    "LEDGER_TLS_CERTIFICATE": "{{ cert_path }}/{{ ledger.crt_prefix }}-crt.pem",
+    "LEDGER_TLS_KEY": "{{ key_path }}/{{ ledger.crt_prefix }}.key",
+    "LEDGER_TLS_CERTIFICATE": "{{ cert_path }}/{{ ledger.crt_prefix }}.crt",
     "LEDGER_TLS_CAS": [
 {% for cert in ledger.trusted_external_certs | default([]) %}
       "{{ cert_ext_path }}/{{ cert }}",
@@ -67,8 +67,8 @@
 {% for key, value in (ilp_validator_config | default({})).iteritems() %}
     "VALIDATOR_{{ key | upper }}": "{{ value }}",
 {% endfor %}
-    "VALIDATOR_TLS_KEY": "{{ key_path }}/{{ validator_crt_prefix }}-key.pem",
-    "VALIDATOR_TLS_CERTIFICATE": "{{ cert_path }}/{{ validator_crt_prefix }}-crt.pem",
+    "VALIDATOR_TLS_KEY": "{{ key_path }}/{{ validator_crt_prefix }}.key",
+    "VALIDATOR_TLS_CERTIFICATE": "{{ cert_path }}/{{ validator_crt_prefix }}.crt",
     "VALIDATOR_TLS_CAS": [
 {% for cert in ilp_validator_trusted_external_certs | default([]) %}
       "{{ cert_ext_path }}/{{ cert }}",
@@ -96,8 +96,8 @@
 {% for key, value in (fx_connector_config | default({})).iteritems() %}
     "CONNECTOR_{{ key | upper }}": "{{ value }}",
 {% endfor %}
-    "CONNECTOR_TLS_KEY": "{{ key_path }}/{{ fx_connector_crt_prefix }}-key.pem",
-    "CONNECTOR_TLS_CERTIFICATE": "{{ cert_path }}/{{ fx_connector_crt_prefix }}-crt.pem",
+    "CONNECTOR_TLS_KEY": "{{ key_path }}/{{ fx_connector_crt_prefix }}.key",
+    "CONNECTOR_TLS_CERTIFICATE": "{{ cert_path }}/{{ fx_connector_crt_prefix }}.crt",
     "CONNECTOR_TLS_CAS": [
 {% for cert in fx_connector_trusted_external_certs | default([]) %}
       "{{ cert_ext_path }}/{{ cert }}",
@@ -110,8 +110,8 @@
         "authorized_access_fingerprints": [
           "{{ fingerprints.results[ripple_connect_idx | int].stdout }}"
         ],
-        "cert": "{{ cert_path }}/{{ fx_connector_crt_prefix }}-crt.pem",
-        "key": "{{ key_path }}/{{ fx_connector_crt_prefix }}-key.pem",
+        "cert": "{{ cert_path }}/{{ fx_connector_crt_prefix }}.crt",
+        "key": "{{ key_path }}/{{ fx_connector_crt_prefix }}.key",
         "ca": [
           "{{ ca_cert }}"
         ]
@@ -126,8 +126,8 @@
 
 {% endfor %}
         ],
-        "cert": "{{ cert_path }}/{{ fx_connector_crt_prefix }}-crt.pem",
-        "key": "{{ key_path }}/{{ fx_connector_crt_prefix }}-key.pem",
+        "cert": "{{ cert_path }}/{{ fx_connector_crt_prefix }}.crt",
+        "key": "{{ key_path }}/{{ fx_connector_crt_prefix }}.key",
         "ca": [
           "{{ cert_ext_path }}/{{ ledger.cert }}",
           "{{ ca_cert }}"

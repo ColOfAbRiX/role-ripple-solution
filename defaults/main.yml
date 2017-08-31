@@ -45,7 +45,7 @@ ripple_solution_db_monitor_pass: Passw0rd
 #
 
 # Prefix for certificate names. Full certificates names will be in the form of
-# "<prefix>-crt.pem" and the keys will be "<prefix>-key.pem"
+# "<prefix>.crt" and the keys will be "<prefix>.key"
 ripple_solution_ca_prefix: "{{ ansible_hostname }}-ca"
 ripple_solution_admin_crt_prefix: "{{ ansible_hostname }}-admin"
 ripple_connect_crt_prefix: "{{ ansible_hostname }}-ripple-connect"
