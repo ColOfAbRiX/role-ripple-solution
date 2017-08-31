@@ -1,6 +1,6 @@
 ---
 
-- name: "Grant User Privileges - {{ component.name }}"
+- name: "Grant User Privileges - {{ component.description }}"
   postgresql_privs:
     login_host:      "{{ component.db_host }}"
     login_user:      "{{ component.db_admin_user }}"

@@ -41,7 +41,7 @@
     "ledgers": {
 {% for ledger in ilp_ledgers_info if ledger.install_local | default(False) | bool %}
       "{{ ledger.currency | upper }}": [{
-        "address": "{{ ledger.host }}",
+        "address": "{{ ledger.currency | lower }}.{{ ledger.host }}",
         "account": "http{% if ledger.config.use_https | default(True) | bool %}s{% endif %}://{{ ledger.host }}:{{ ledger.port }}/account/{{ ripple_connect_ledger_user }}"
       }]{% if not loop.last or ripple_connect_ledgers | default([]) %},{% endif %}
 
