@@ -137,16 +137,16 @@ ripple_connect_install_local: true
 ripple_connect_use_url: ''
 
 # Users of Ripple Connect
-ripple_connect_users:
- - username: consumer_operator
-   password: Passw0rd
-   type:     operator
- - username: consumer_monitor
-   password: Passw0rd
-   type:     monitor
- - username: consumer_custom_rate_operator
-   password: Passw0rd
-   type:     custom_rate_operator
+ripple_connect_users: []
+# - username: consumer_operator
+#   password: Passw0rd
+#   type:     operator
+# - username: consumer_monitor
+#   password: Passw0rd
+#   type:     monitor
+# - username: consumer_custom_rate_operator
+#   password: Passw0rd
+#   type:     custom_rate_operator
 
 # Name of the Ripple Connect account on the Ledgers
 ripple_connect_ledger_user: transact
@@ -354,6 +354,11 @@ ilp_validator_install_local: true
 # is useful when the component is being load balanced and the URL is provided by
 # the load balancer)
 ilp_validator_use_url: ''
+
+# Ed25519 keys for the validator. If not specified they will be created
+# automatically
+ilp_validator_private_key: ''
+ilp_validator_public_key: ''
 
 # ILP Validator configuration
 ilp_validator_config: {}

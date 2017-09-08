@@ -1,4 +1,5 @@
 ---
+# This file starts and checks the ripple services
 
 - name: "Start Ripple Solution"
   service: name=ripple-solution state=started enabled=yes

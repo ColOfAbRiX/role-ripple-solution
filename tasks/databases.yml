@@ -1,4 +1,5 @@
 ---
+# This files creates the database objects
 
 - set_fact:
     knex_root: "{{ ripple_solution_base }}/knexsql"

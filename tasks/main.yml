@@ -1,5 +1,5 @@
 ---
-# tasks file for ripple-solution
+# This file is responsible to orchestrate the Ripple installation and configuration
 
 - name: "Require Correct Linux Distribution"
   assert:

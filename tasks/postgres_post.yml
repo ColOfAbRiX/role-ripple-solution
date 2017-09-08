@@ -1,4 +1,5 @@
 ---
+# This file performs post-creation steps for the databases
 
 - name: "Grant User Privileges - {{ component.description }}"
   postgresql_privs:

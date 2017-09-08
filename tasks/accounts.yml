@@ -1,4 +1,5 @@
 ---
+# This file creates the acconuts on the ledgers
 
 - set_fact:
     ilp_ledgers_accounts:
@@ -6,15 +7,17 @@
        fingerprint:   "{{ fingerprints.results[ripple_connect_idx].stdout | default('') }}"
        notifications: "{{ ripple_connect_info.url | default('') }}/ledger/notifications"
        enabled:       "{{ ripple_connect_info.enabled and ripple_connect_install_local | default(False) | bool }}"
+       balance:       "-1000000"
      - account:       "{{ fx_connector_ledger_user }}"
        fingerprint:   "{{ fingerprints.results[fx_connector_idx].stdout | default('') }}"
        notifications: "{{ fx_connector_info.url | default('') }}/notification"
        enabled:       "{{ fx_connector_info.enabled and fx_connector_install_local | default(False) | bool }}"
+       balance:       "0"
 
 - name: "Create Accounts"
   shell: |
     {{ ripple_solution_scripts_base }}/rs_requests.sh \
-        "{{ ledger.host_data.url }}/account" \
+        "{{ ledger.url }}/account" \
         --method PUT \
         --cert "{{ admin_cert }}" \
         --key "{{ admin_key }}" \
@@ -23,7 +26,7 @@
             \"name\": \"{{ item.account }}\",
             \"fingerprint\": \"{{ item.fingerprint }}\",
             \"notification_url\": \"{{ item.notifications }}\",
-            \"minimum_allowed_balance\": \"-1000000\"
+            \"minimum_allowed_balance\": \"{{ item.balance }}\"
         }"
   when: item.enabled | default(True)
   register: result

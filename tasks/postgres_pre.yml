@@ -1,4 +1,5 @@
 ---
+# This file performs pre-creation steps for the databases
 
 - name: "Create Databases - {{ component.description }}"
   postgresql_db:

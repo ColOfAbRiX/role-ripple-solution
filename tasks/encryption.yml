@@ -1,4 +1,6 @@
 ---
+# This file takes care of encrypting the values that go into the configuration
+# files, but only if necessary
 
 #
 # Passwords encryption

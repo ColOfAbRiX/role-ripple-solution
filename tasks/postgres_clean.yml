@@ -1,4 +1,5 @@
 ---
+# This file resets the databases
 
 - name: "Stop Ripple Solution"
   service: name=ripple-solution state=stopped use=systemctl

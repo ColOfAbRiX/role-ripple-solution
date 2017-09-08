@@ -236,6 +236,36 @@ def list_clear_ilp_passwords(key, ilpv_info, ilpv_ed25519, fxc_info, fxc_hmac, l
 
     return output
 
+from ansible.errors import AnsibleFilterError
+from ansible.module_utils.six.moves.urllib.parse import urlsplit
+from ansible.utils import helpers
+
+def split_url(value, query='', alias='urlsplit'):
+    """
+    This same function will be available from Ansible 2.4 with this same interface.
+    For more information see:
+    https://docs.ansible.com/ansible/devel/playbooks_filters.html#url-split-filter
+    """
+    url = urlsplit(value)
+    results = {
+        'hostname': url.hostname,
+        'netloc': url.netloc,
+        'username': url.username,
+        'password': url.password,
+        'path': url.path,
+        'port': url.port,
+        'scheme': url.scheme,
+        'query': url.query,
+        'fragment': url.fragment
+    }
+
+    if query:
+        if query not in results:
+            raise AnsibleFilterError(alias + ': unknown URL component: %s' % query)
+        return results[query]
+    else:
+        return results
+
 
 class FilterModule(object):
     """ Ansible jinja2 filters """
@@ -246,7 +276,8 @@ class FilterModule(object):
             'list_encrypted_rc_passwords': list_encrypted_rc_passwords,
             'list_clear_rc_passwords': list_clear_rc_passwords,
             'list_encrypted_ilp_passwords': list_encrypted_ilp_passwords,
-            'list_clear_ilp_passwords': list_clear_ilp_passwords
+            'list_clear_ilp_passwords': list_clear_ilp_passwords,
+            'urlsplit': split_url
         }
 
 # vim: ft=python:ts=4:sw=4

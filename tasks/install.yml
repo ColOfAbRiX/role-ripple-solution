@@ -1,4 +1,5 @@
 ---
+# This file installs the packages of the product
 
 - name: "Install Client Certificate for Repository"
   copy:
