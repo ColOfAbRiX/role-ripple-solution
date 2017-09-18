@@ -17,9 +17,11 @@ def build_ripple_extra(value, rdbms='postgres', extra_vars={}):
     generic. See tasks/datastructs.yml
     """
 
-    # Extra custom values in the root of the dictionary
+    # Extra custom values in the root of the dictionary. The actual value on "value"
+    # takes precedence
     for e_key, e_value in extra_vars.iteritems():
-        value[e_key] = e_value
+        if not e_key in value:
+            value[e_key] = e_value
 
     # Service name
     if value['name'] == 'ilp_ledger':

@@ -16,7 +16,7 @@
 
 - name: "Create Accounts"
   shell: |
-    {{ ripple_solution_scripts_base }}/rs_requests.sh \
+    "{{ ripple_solution_scripts_base }}/rs_requests.sh" \
         "{{ ledger.url }}/account" \
         --method PUT \
         --cert "{{ admin_cert }}" \

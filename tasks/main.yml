@@ -5,14 +5,12 @@
   assert:
     that: ansible_distribution | lower in ['redhat', 'centos']
     msg:  "This Linux distrution is not supported by the role."
-  no_log: "{{ ripple_solution_no_log | default(True) | bool }}"
   tags: ripple-solution
 
 - name: "Require Supported RDBMS"
   assert:
     that: ripple_solution_db_dialect in ['postgres']
     msg:  "This role supports only 'postgres' RDBMS for Ripple Solution."
-  no_log: "{{ ripple_solution_no_log | default(True) | bool }}"
   tags: ripple-solution
 
 
@@ -27,7 +25,6 @@
 # Repository and package installation
 - name: "Install Ripple Solution"
   include: install.yml
-  no_log: "{{ ripple_solution_no_log | default(True) | bool }}"
   tags: ripple-solution
 
 
@@ -83,6 +80,12 @@
   no_log: "{{ ripple_solution_no_log | default(True) | bool }}"
   tags: ripple-solution
 
+# Creates keys and key pairs
+- name: "Create Keys"
+  include: keys.yml
+  no_log: "{{ ripple_solution_no_log | default(True) | bool }}"
+  tags: ripple-solution
+
 # Encrypt passwords and find hashes of certificates
 - name: "Encryption and Hashes"
   include: encryption.yml
@@ -94,7 +97,6 @@
 - name: "Ripple Configuration"
   become_user: "{{ ripple_solution_user }}"
   include: config.yml
-  no_log: "{{ ripple_solution_no_log | default(True) | bool }}"
   tags: ripple-solution
 
 
@@ -102,17 +104,16 @@
 - name: "Initialization"
   include: init.yml
   when: ripple_solution_enabled | default(True) | bool
-  no_log: "{{ ripple_solution_no_log | default(True) | bool }}"
   tags: ripple-solution
 
 
 # Create the accounts on the system
 - name: "Ledger Accounts"
   include: accounts.yml
-  when: ripple_solution_enabled | default(True) | bool
+  when: ripple_solution_enabled | default(True) | bool and
+        ledger.cluster_run
   with_items:
    - "{{ ilp_ledgers_info | default([]) }}"
   loop_control:
     loop_var: ledger
-  no_log: "{{ ripple_solution_no_log | default(True) | bool }}"
   tags: ripple-solution

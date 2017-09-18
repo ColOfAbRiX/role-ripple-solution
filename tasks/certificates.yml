@@ -164,53 +164,6 @@
    - "{{ cert_items }}"
 
 #
-# Key Pairs Creation
-#
-
-- set_fact:
-    secret_key_files:
-     - { name: mac_key,                   enabled: "{{ ripple_connect_info.enabled }}" }
-     - { name: external_access_token_key, enabled: "{{ ripple_connect_info.enabled }}" }
-     - { name: client_access_token_key,   enabled: "{{ ripple_connect_info.enabled }}" }
-     - { name: ilp_key,                   enabled: "{{ ripple_connect_info.enabled }}" }
-     - { name: CONNECTOR_QUOTE_HMAC_KEY,  enabled: "{{ fx_connector_info.enabled }}" }
-    ed25519_key_files:
-     - { name: validator_key_pair,        enabled: "{{ ilp_validator_info.enabled }}" }
-
-- name: "Create Secret Keys"
-  shell: node {{ ripple_solution_scripts_base }}/secret_key_generator.js > {{ pia_path }}/{{ item.name }}.pia
-  args:
-    creates: "{{ pia_path }}/{{ item.name }}.pia"
-  when: item.enabled
-  with_items:
-   - "{{ secret_key_files }}"
-
-- name: "Install Existing Ed25519 Keys"
-  copy:
-    content: |
-      Public key: {{ ilp_validator_public_key }}
-      Private key: {{ ilp_validator_private_key }}
-    dest:   "{{ pia_path }}/validator_key_pair.pia"
-    mode:   '0644'
-    force:  yes
-    owner:  "{{ ripple_solution_user }}"
-    group:  "{{ ripple_solution_group }}"
-    seuser: system_u
-    serole: object_r
-    setype: usr_t
-  when: "ilp_validator_public_key | default('') != '' and
-         ilp_validator_private_key | default('') != ''"
-
-- name: "Create Ed25519 Keys"
-  shell: node {{ ripple_solution_scripts_base }}/ed25519_key_pair_generator.js > {{ pia_path }}/{{ item.name }}.pia
-  args:
-    creates: "{{ pia_path }}/{{ item.name }}.pia"
-  when: item.enabled
-  with_items:
-   - "{{ ed25519_key_files }}"
-
-
-#
 # Security and Permissions
 #
 
@@ -235,9 +188,3 @@
   when: item.enabled
   with_items:
    - "{{ cert_items }}"
-
-- name: "Secret Files Permissions"
-  file: path="{{ pia_path }}/{{ item.name }}.pia" mode="0400"
-  when: item.enabled
-  with_items:
-   - "{{ (secret_key_files + ed25519_key_files) | list }}"

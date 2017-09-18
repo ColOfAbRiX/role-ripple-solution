@@ -1,10 +1,10 @@
 {% macro write_encrypted_string(index) -%}
 {% if 'stdout' in encrypted_ilp_strings[index] %}{{ encrypted_ilp_strings[index].stdout }}{% else %}{{ existing_encrypted_ilp_strings[index].string }}{% endif %}
 {%- endmacro %}
-{% macro host_map() -%}
+{% macro host_map(use_mapping) -%}
     "HOST_MAP": {
 {% for item in ripple_solution_info %}
-{% if item.use_url | default('') != '' %}
+{% if item.use_url | default('') != '' and use_mapping %}
       "{{ item.address }}": "{{ item.host_data.address }}"{% if not loop.last %},{% endif %}
 
 {% endif %}
@@ -17,7 +17,7 @@
     "RC_CONFIGS_PATH": "{{ ripple_solution_config_base }}",
     "RC_SECRETS_ENCRYPTED": {{ ripple_connect_secrets_encrypted }},
     "RC_ENABLE_UI": {{ ripple_connect_enable_ui }},
-    {{ host_map() }}
+    {{ host_map(ripple_connect_info.map_hosts) }}
   }{% if ilp_ledgers_info | default([]) or ilp_validator_info.enabled or fx_connector_info.enabled %},{% endif %}
 
 
@@ -45,7 +45,7 @@
 {% endfor %}
       "{{ ca_cert }}"
     ],
-    {{ host_map() }}
+    {{ host_map(ledger.map_hosts) }}
   }{% if not loop.last or ilp_validator_info.enabled or fx_connector_info.enabled %},{% endif %}
 
 
@@ -75,7 +75,7 @@
 {% endfor %}
       "{{ ca_cert }}"
     ],
-    {{ host_map() }}
+    {{ host_map(ilp_validator_info.map_hosts) }}
   }{% if fx_connector_info.enabled %},{% endif %}
 
 
@@ -143,7 +143,7 @@
 
 {% endfor %}
     ],
-    {{ host_map() }}
+    {{ host_map(fx_connector_info.map_hosts) }}
   }
 {% endif %}
 }

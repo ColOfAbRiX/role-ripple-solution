@@ -6,6 +6,7 @@
 #
 
 - name: "Read Ripple Connect Secrets"
+  no_log: true
   shell: "cat {{ pia_path }}/{{ item }}.pia"
   register: ripple_connect_secrets
   changed_when: false
@@ -16,6 +17,7 @@
    - ilp_key
 
 - name: "Read FX Connector Secrets"
+  no_log: true
   shell: "cat {{ pia_path }}/{{ item }}.pia"
   register: connector_secrets
   changed_when: false
@@ -28,6 +30,7 @@
   when: fx_connector_info.enabled
 
 - name: "Read ILP Validator Secrets"
+  no_log: true
   shell: "cat {{ pia_path }}/validator_key_pair.pia"
   changed_when: false
   register: validator_key

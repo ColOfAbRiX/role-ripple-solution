@@ -1,5 +1,5 @@
 ---
-# This file aggregates several variables into better data structures so that It
+# This file aggregates several variables into better data structures so that it
 # becomes possible to perform loops over similar sets of data
 
 - name: "Aggregate Data"
@@ -29,6 +29,8 @@
       db_check_table: public.db_schema_versions
       # Override URL usually used as public interface
       use_url:        "{{ ripple_connect_use_url | default('') }}"
+      # If set to true, it will fill the HOST_MAP section on config-ilp.json
+      map_hosts:      "{{ ripple_connect_map_hosts | default(False) }}"
       config:         "{{ ripple_connect_config }}"
       # Prefix for the file names of certificates
       crt_prefix:     "{{ ripple_connect_crt_prefix }}"
@@ -62,6 +64,8 @@
       db_check_table: public.n_db_schema_versions
       # Override URL usually used as public interface
       use_url:        "{{ ilp_validator_use_url | default('') }}"
+      # If set to true, it will fill the HOST_MAP section on config-ilp.json
+      map_hosts:      "{{ ilp_validator_map_hosts | default(False) }}"
       config:         "{{ ilp_validator_config }}"
       # Prefix for the file names of certificates
       crt_prefix:     "{{ validator_crt_prefix }}"
@@ -95,6 +99,8 @@
       db_check_table: public.c_db_schema_versions
       # Override URL usually used as public interface
       use_url:        "{{ fx_connector_use_url | default('') }}"
+      # If set to true, it will fill the HOST_MAP section on config-ilp.json
+      map_hosts:      "{{ fx_connector_map_hosts | default(False) }}"
       config:         "{{ fx_connector_config }}"
       # Prefix for the file names of certificates
       crt_prefix:     "{{ fx_connector_crt_prefix }}"
@@ -121,6 +127,8 @@
       health_query:   '/health'
       # What to check for in the answer to determine the health
       health_json:    '"status": *"OK"'
+      # If set to true, it will fill the HOST_MAP section on config-ilp.json
+      map_hosts:      false
 
 # NOTE: The various filter manipulate the various *_info_tmp dictionaries either
 # by building new values or changing existing ones. Refer to the end results that

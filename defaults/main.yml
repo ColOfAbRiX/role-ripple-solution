@@ -136,6 +136,17 @@ ripple_connect_install_local: true
 # the load balancer)
 ripple_connect_use_url: ''
 
+# If set to true, it will fill the HOST_MAP section on config-ilp.json with
+# either the calculated value from host and port or from the _use_url value
+ripple_connect_map_hosts: false
+
+# Secret keys. If any of these value is left blank, a new random key is generated.
+# These values will go in secrets.json (*_atk=Access Token Key)
+ripple_connect_mac_key: ''
+ripple_connect_external_atk: ''
+ripple_connect_client_atk: ''
+ripple_connect_ilp_key: ''
+
 # Users of Ripple Connect
 ripple_connect_users: []
 # - username: consumer_operator
@@ -257,6 +268,10 @@ ilp_ledgers: []
 #   # provided by the load balancer)
 #   use_url: ''
 #
+#   # If set to true, it will fill the HOST_MAP section on config-ilp.json with
+#   # either the calculated value from host and port or from the _use_url value
+#   map_hosts: false
+#
 #   # Ledger configuration
 #   config:
 #     log_level: info
@@ -309,12 +324,20 @@ fx_connector_install_local: true
 # the load balancer)
 fx_connector_use_url: ''
 
+# If set to true, it will fill the HOST_MAP section on config-ilp.json with
+# either the calculated value from host and port or from the _use_url value
+fx_connector_map_hosts: false
+
 # Name of the FX Connector account on the Ledgers
 fx_connector_ledger_user: connector
 
 # The ILP Validator to associate with this FX Connector. Don't include here
 # local Validators that use the setting "ilp_validator_install_local=yes".
 fx_connector_use_validator_url: ''
+
+# Existing Quote HMAC key to be installed on the machine. If empty, a new random
+# one will be generated
+fx_connector_quote_hmac_key: ''
 
 # Connector configuration
 fx_connector_config: {}
@@ -354,6 +377,10 @@ ilp_validator_install_local: true
 # is useful when the component is being load balanced and the URL is provided by
 # the load balancer)
 ilp_validator_use_url: ''
+
+# If set to true, it will fill the HOST_MAP section on config-ilp.json with
+# either the calculated value from host and port or from the _use_url value
+ilp_validator_map_hosts: false
 
 # Ed25519 keys for the validator. If not specified they will be created
 # automatically

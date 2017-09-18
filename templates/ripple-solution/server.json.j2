@@ -1,7 +1,7 @@
 {
   "secure": {{ ripple_connect_config.use_https | default("false") }},
   "port": "{{ ripple_connect_port | string }}",
-  "host": "{{ ripple_connect_host }}",
+  "host": "0.0.0.0",
   "server_key_path": "{{ key_path }}/{{ ripple_connect_info.key_file }}",
   "server_certificate_path": "{{ cert_path }}/{{ ripple_connect_info.crt_file }}",
   "server_ca_paths": [
