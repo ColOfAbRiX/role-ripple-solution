@@ -32,6 +32,7 @@
   register: result
   failed_when: result.rc != 0 and
                'UnmodifiableResourceError' not in result.stderr
-  changed_when: result.rc == 0
+  changed_when: result.rc == 0 and
+               'UnmodifiableResourceError' not in result.stderr
   with_items:
    - "{{ (ilp_ledgers_accounts + ledger.accounts) | list }}"

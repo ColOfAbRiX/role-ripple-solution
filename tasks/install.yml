@@ -63,3 +63,14 @@
 - name: "Update Systemd"
   command: systemctl daemon-reload
   when: systemd_ripple | changed
+
+- name: "Configure Log Rotation"
+  template:
+    src:    etc/logrotate.d/ripple-solution.j2
+    dest:   /etc/logrotate.d/ripple-solution
+    mode:   '0644'
+    owner:  root
+    group:  root
+    seuser: system_u
+    serole: object_r
+    setype: etc_t

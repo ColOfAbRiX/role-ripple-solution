@@ -42,6 +42,7 @@
   when: ilp_validator_info.enabled
 
 - name: "Read Fingerprints"
+  no_log: "{{ ripple_solution_no_log | default(True) | bool }}"
   shell: "cat {{ cert_path }}/{{ item.crt_prefix }}.fpt"
   changed_when: false
   when: item.enabled
