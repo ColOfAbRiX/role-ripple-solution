@@ -76,7 +76,7 @@
 
 - name: "Install Configuration Files"
   template:
-    src:    "ripple-solution/{{ item }}.j2"
+    src:    "opt/ripple-solution/config/{{ item }}.j2"
     dest:   "{{ ripple_solution_config_base }}/{{ item }}"
     mode:   '0644'
     force:  yes

@@ -29,8 +29,8 @@
 - name: "Install Packages"
   yum:
     update_cache: yes
-    name: ripple-solution
-    state: present
+    name:  "ripple-solution{% if ripple_solution_version not in ['', 'latest'] %}-{{ ripple_solution_version }}{% endif %}"
+    state: "{% if ripple_solution_version != 'latest' %}present{% else %}latest{% endif %}"
 
 - name: "Copy Custom Scripts"
   copy:

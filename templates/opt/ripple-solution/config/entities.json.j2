@@ -2,7 +2,7 @@
     "domain": "{{ ripple_connect_info.host }}:{{ ripple_connect_info.port }}",
 
     "known_remotes": [
-{% for item in ripple_connect_partners %}
+{% for item in ripple_connect_partners | default([]) %}
       {
         "domain": "{{ item.address }}"
       }{% if not loop.last %},{% endif %}

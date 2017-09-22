@@ -7,6 +7,12 @@
 
 ripple_solution_enabled: true
 
+# Version to install:
+# - Leave empty for latest version, if not already installed;
+# - "latest" to updated to latest version;
+# - "x.y.z" to install a specific version
+ripple_solution_version: ""
+
 # Ripple Paths
 ripple_solution_base:         /opt/ripple-solution
 ripple_solution_config_base:  "{{ ripple_solution_base }}/config"

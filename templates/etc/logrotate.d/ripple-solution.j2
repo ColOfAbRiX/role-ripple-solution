@@ -10,7 +10,7 @@
 /var/log/ripple-solution/validator-err.log
 /var/log/ripple-solution/validator-out.log
 {% endif %}
-{%- for ledger in ilp_ledgers if ledger.enabled %}
+{%- for ledger in ilp_ledgers | default([]) if ledger.enabled %}
 /var/log/ripple-solution/ledger{{ loop.index0 }}-err.log
 /var/log/ripple-solution/ledger{{ loop.index0 }}-out.log
 {% endfor %}
