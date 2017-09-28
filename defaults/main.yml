@@ -50,6 +50,16 @@ ripple_solution_db_monitor_pass: Passw0rd
 # Certificates
 #
 
+#
+# NOTES:
+#  - The role can create its own certificate but its setup is quite simple and
+#    not for production setups. It is recommended that you create the SSL
+#    certificates in a different way and then copy them on the appropriate place
+#    inside the ripple-solution directory structure. Then set the various _prefix
+#    to the certificate names.
+#  - All the certificates must be shared across members of the same cluster
+#
+
 # Prefix for certificate names. Full certificates names will be in the form of
 # "<prefix>.crt" and the keys will be "<prefix>.key"
 ripple_solution_ca_prefix: "{{ ansible_hostname }}-ca"
@@ -137,17 +147,18 @@ ripple_connect_connector_validator_pairs: []
 # to true will configure the other components to use this Ripple Connect instance
 ripple_connect_install_local: true
 
-# Instead of building the URL from the given service parameters use this one (it
-# is useful when the component is being load balanced and the URL is provided by
-# the load balancer)
-ripple_connect_use_url: ''
+# If present, the URL of the reverse proxy. The role assumes that the reverse
+# proxy is in front of the load balancer (if present).
+ripple_connect_reverse_proxy_url: ''
 
-# If set to true, it will fill the HOST_MAP section on config-ilp.json with
-# either the calculated value from host and port or from the _use_url value
-ripple_connect_map_hosts: false
+# If present, the URL of the load balancer. The role assumes that the reverse
+# proxy (if present) is in front of the load balancer.
+ripple_connect_load_balancer_url: ''
 
 # Secret keys. If any of these value is left blank, a new random key is generated.
-# These values will go in secrets.json (*_atk=Access Token Key)
+# These values will go in secrets.json (*_atk=Access Token Key).
+# NOTES:
+#  - All these values must be shared across members of the same cluster
 ripple_connect_mac_key: ''
 ripple_connect_external_atk: ''
 ripple_connect_client_atk: ''
@@ -269,14 +280,13 @@ ilp_ledgers: []
 #   #   fingerprint:   '46:0F:D7:68:B6:DA:4A:63:DE:DD:C6:00:00:54:BD:EE:6A:DB:6B:E1:89:FA:C2:27:1D:5B:AC:4B:50:18:50:1C'
 #   #   notifications: 'https://provider.example.com:5000/ledger/notifications'
 #
-#   # Instead of building the URL from the given service parameters use this one
-#   # (it is useful when the component is being load balanced and the URL is
-#   # provided by the load balancer)
-#   use_url: ''
+#   # If present, the URL of the reverse proxy. The role assumes that the reverse
+#   # proxy is in front of the load balancer (if present).
+#   reverse_proxy_url: ''
 #
-#   # If set to true, it will fill the HOST_MAP section on config-ilp.json with
-#   # either the calculated value from host and port or from the _use_url value
-#   map_hosts: false
+#   # If present, the URL of the load balancer. The role assumes that the reverse
+#   # proxy (if present) is in front of the load balancer.
+#   load_balancer_url: ''
 #
 #   # Ledger configuration
 #   config:
@@ -316,7 +326,8 @@ fx_connector_ledgers: []
 #   fingerprints:
 #    - '8F:14:75:41:85:43:CB:16:70:21:02:B3:28:8A:9A:6E:B6:8C:89:55:E3:28:F1:F4:E3:FA:A4:23:40:23:43:7B'
 
-# Associations between ledgers managed by this FX Connector
+# Associations between ledgers managed by this FX Connector (if the FX Connector
+# is enabled this list must be filled)
 fx_connector_pairs: []
 # - -'EUR@https://provider.example.com:6000'
 #   - EUR@https://consumer.example.com:6000'
@@ -325,14 +336,13 @@ fx_connector_pairs: []
 # to true will configure the other components to use this FX Connector instance
 fx_connector_install_local: true
 
-# Instead of building the URL from the given service parameters use this one (it
-# is useful when the component is being load balanced and the URL is provided by
-# the load balancer)
-fx_connector_use_url: ''
+# If present, the URL of the reverse proxy. The role assumes that the reverse
+# proxy is in front of the load balancer (if present).
+fx_connector_reverse_proxy_url: ''
 
-# If set to true, it will fill the HOST_MAP section on config-ilp.json with
-# either the calculated value from host and port or from the _use_url value
-fx_connector_map_hosts: false
+# If present, the URL of the load balancer. The role assumes that the reverse
+# proxy (if present) is in front of the load balancer.
+fx_connector_load_balancer_url: ''
 
 # Name of the FX Connector account on the Ledgers
 fx_connector_ledger_user: connector
@@ -343,6 +353,8 @@ fx_connector_use_validator_url: ''
 
 # Existing Quote HMAC key to be installed on the machine. If empty, a new random
 # one will be generated
+# NOTES:
+#  - All these values must be shared across members of the same cluster
 fx_connector_quote_hmac_key: ''
 
 # Connector configuration
@@ -379,17 +391,18 @@ ilp_validator_trusted_external_certs: []
 # to true will configure the other components to use this ILP Validator instance
 ilp_validator_install_local: true
 
-# Instead of building the URL from the given service parameters use this one (it
-# is useful when the component is being load balanced and the URL is provided by
-# the load balancer)
-ilp_validator_use_url: ''
+# If present, the URL of the reverse proxy. The role assumes that the reverse
+# proxy is in front of the load balancer (if present).
+ilp_validator_reverse_proxy_url: ''
 
-# If set to true, it will fill the HOST_MAP section on config-ilp.json with
-# either the calculated value from host and port or from the _use_url value
-ilp_validator_map_hosts: false
+# If present, the URL of the load balancer. The role assumes that the reverse
+# proxy (if present) is in front of the load balancer.
+ilp_validator_load_balancer_url: ''
 
 # Ed25519 keys for the validator. If not specified they will be created
 # automatically
+# NOTES:
+#  - The ilp_validator_public_key must be shared across members of the same cluster
 ilp_validator_private_key: ''
 ilp_validator_public_key: ''
 

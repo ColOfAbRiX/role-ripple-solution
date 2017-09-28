@@ -28,6 +28,7 @@
 
 
 - name: "Install Existing Secret Keys"
+  no_log: "{{ ripple_solution_no_log | default(True) | bool }}"
   copy:
     content: |
       Secret key: {{ item.secret_key }}
@@ -37,6 +38,7 @@
   when: item.secret_key != ''
 
 - name: "Install Existing Ed25519 Keys"
+  no_log: "{{ ripple_solution_no_log | default(True) | bool }}"
   copy:
     content: |
       Public key: {{ item.public_key }}

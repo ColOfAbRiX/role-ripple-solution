@@ -1,5 +1,5 @@
 {
-    "domain": "{{ ripple_connect_info.host }}:{{ ripple_connect_info.port }}",
+    "domain": "{{ ripple_connect_info.host }}{% if ripple_connect_info.port not in [80, 443] %}:{{ ripple_connect_info.port }}{% endif %}",
 
     "known_remotes": [
 {% for item in ripple_connect_partners | default([]) %}
@@ -39,10 +39,10 @@
     ],
 
     "ledgers": {
-{% for ledger in ilp_ledgers_info if ledger.install_local | default(False) | bool %}
+{% for ledger in ilp_ledgers_info if ledger.enabled and ledger.install_local | default(False) | bool %}
       "{{ ledger.currency | upper }}": [{
         "address": "{{ ledger.currency | lower }}.{{ ledger.host }}",
-        "account": "http{% if ledger.config.use_https | default(True) | bool %}s{% endif %}://{{ ledger.host }}:{{ ledger.port }}/account/{{ ripple_connect_ledger_user }}"
+        "account": "http{% if ledger.config.use_https | default(True) | bool %}s{% endif %}://{{ ledger.host }}{% if ledger.port not in [80, 443] %}:{{ ledger.port }}{% endif %}/account/{{ ripple_connect_ledger_user }}"
       }]{% if not loop.last or ripple_connect_ledgers | default([]) %},{% endif %}
 
 {% endfor %}

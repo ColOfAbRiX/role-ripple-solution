@@ -6,129 +6,137 @@
   set_fact:
     ripple_connect_info_tmp:
       # General info
-      name:           ripple_connect
-      description:    Ripple Connect
+      name:              ripple_connect
+      description:       Ripple Connect
       # Tells if the component is enabled. It's always a boolean value
-      enabled:        "{{ ripple_connect_enabled | default(False) | bool }}"
+      enabled:           "{{ ripple_connect_enabled | default(False) | bool }}"
       # Used to run tasks only once per cluster. This will be true only on one of the nodes
-      cluster_run:    "{{ (ripple_connect_cluster_members | default([ansible_hostname]) | sort | first == ansible_hostname) | bool }}"
+      cluster_run:       "{{ (ripple_connect_cluster_members | default([ansible_hostname]) | sort | first == ansible_hostname) | bool }}"
       # General info
-      port:           "{{ ripple_connect_port }}"
-      host:           "{{ ripple_connect_host }}"
+      port:              "{{ ripple_connect_port }}"
+      host:              "{{ ripple_connect_host }}"
       # Database info
-      db_host:        "{{ ripple_connect_db_host }}"
-      db_port:        "{{ ripple_connect_db_port }}"
-      db_user:        "{{ ripple_connect_db_user }}"
-      db_pass:        "{{ ripple_connect_db_pass }}"
-      db_name:        "{{ ripple_connect_db_name }}"
-      db_admin_user:  "{{ ripple_connect_db_admin_user }}"
-      db_admin_pass:  "{{ ripple_connect_db_admin_pass }}"
+      db_host:           "{{ ripple_connect_db_host }}"
+      db_port:           "{{ ripple_connect_db_port }}"
+      db_user:           "{{ ripple_connect_db_user }}"
+      db_pass:           "{{ ripple_connect_db_pass }}"
+      db_name:           "{{ ripple_connect_db_name }}"
+      db_admin_user:     "{{ ripple_connect_db_admin_user }}"
+      db_admin_pass:     "{{ ripple_connect_db_admin_pass }}"
       # What SQL initializes the DB
       db_sql_file:    ripple-connect.sql
       # What table to check to determine if the DB is initialized
-      db_check_table: public.db_schema_versions
-      # Override URL usually used as public interface
-      use_url:        "{{ ripple_connect_use_url | default('') }}"
-      # If set to true, it will fill the HOST_MAP section on config-ilp.json
-      map_hosts:      "{{ ripple_connect_map_hosts | default(False) }}"
-      config:         "{{ ripple_connect_config }}"
+      db_check_table:    public.db_schema_versions
+      config:            "{{ ripple_connect_config }}"
       # Prefix for the file names of certificates
-      crt_prefix:     "{{ ripple_connect_crt_prefix }}"
+      crt_prefix:        "{{ ripple_connect_crt_prefix }}"
       # URI query to check for the health of the service
-      health_query:   ''
+      health_query:      ''
       # What to check for in the answer to determine the health
-      health_json:    '"version": *"[0-9]+\.[0-9]+\.[0-9]+"'
+      health_json:       '"version": *"[0-9]+\.[0-9]+\.[0-9]+"'
+      # If a load balancer is present this must be filled with its URL and the
+      # role will take care of using this value where needed instead of the host
+      # data.
+      load_balancer_url: "{{ ripple_connect_load_balancer_url }}"
+      # If a reverse proxy is present this must be filled with its URL and the
+      # role will take care of using this value where needed instead of the host
+      # data.
+      reverse_proxy_url: "{{ ripple_connect_reverse_proxy_url }}"
 
     ilp_validator_info_tmp:
       # General info
-      name:           ilp_validator
-      description:    ILP Validator
+      name:              ilp_validator
+      description:       ILP Validator
       # Tells if the component is enabled. It's always a boolean value
-      enabled:        "{{ ilp_validator_enabled | default(False) | bool }}"
+      enabled:           "{{ ilp_validator_enabled | default(False) | bool }}"
       # Used to run tasks only once per cluster. This will be true only on one of the nodes
-      cluster_run:    "{{ (ilp_validator_cluster_members | default([ansible_hostname]) | sort | first == ansible_hostname) | bool }}"
+      cluster_run:       "{{ (ilp_validator_cluster_members | default([ansible_hostname]) | sort | first == ansible_hostname) | bool }}"
       # General info
-      port:           "{{ ilp_validator_port }}"
-      host:           "{{ ilp_validator_host }}"
+      port:              "{{ ilp_validator_port }}"
+      host:              "{{ ilp_validator_host }}"
       # Database info
-      db_host:        "{{ ilp_validator_db_host }}"
-      db_port:        "{{ ilp_validator_db_port }}"
-      db_user:        "{{ ilp_validator_db_user }}"
-      db_pass:        "{{ ilp_validator_db_pass }}"
-      db_name:        "{{ ilp_validator_db_name }}"
-      db_admin_user:  "{{ ilp_validator_db_admin_user }}"
-      db_admin_pass:  "{{ ilp_validator_db_admin_pass }}"
+      db_host:           "{{ ilp_validator_db_host }}"
+      db_port:           "{{ ilp_validator_db_port }}"
+      db_user:           "{{ ilp_validator_db_user }}"
+      db_pass:           "{{ ilp_validator_db_pass }}"
+      db_name:           "{{ ilp_validator_db_name }}"
+      db_admin_user:     "{{ ilp_validator_db_admin_user }}"
+      db_admin_pass:     "{{ ilp_validator_db_admin_pass }}"
       # What SQL initializes the DB
-      db_sql_file:    validator.sql
+      db_sql_file:       validator.sql
       # What table to check to determine if the DB is initialized
-      db_check_table: public.n_db_schema_versions
-      # Override URL usually used as public interface
-      use_url:        "{{ ilp_validator_use_url | default('') }}"
-      # If set to true, it will fill the HOST_MAP section on config-ilp.json
-      map_hosts:      "{{ ilp_validator_map_hosts | default(False) }}"
+      db_check_table:    public.n_db_schema_versions
       config:         "{{ ilp_validator_config }}"
       # Prefix for the file names of certificates
-      crt_prefix:     "{{ validator_crt_prefix }}"
+      crt_prefix:        "{{ validator_crt_prefix }}"
       # URI query to check for the health of the service
-      health_query:   '/health'
+      health_query:      '/health'
       # What to check for in the answer to determine the health
-      health_json:    '"status": *"OK"'
+      health_json:       '"status": *"OK"'
+      # If a load balancer is present this must be filled with its URL and the
+      # role will take care of using this value where needed instead of the host
+      # data.
+      load_balancer_url: "{{ ilp_validator_load_balancer_url }}"
+      # If a reverse proxy is present this must be filled with its URL and the
+      # role will take care of using this value where needed instead of the host
+      # data.
+      reverse_proxy_url: "{{ ilp_validator_reverse_proxy_url }}"
 
     fx_connector_info_tmp:
       # General info
-      name:           fx_connector
-      description:    FX Connector
+      name:              fx_connector
+      description:       FX Connector
       # Tells if the component is enabled. It's always a boolean value
-      enabled:        "{{ fx_connector_enabled | default(False) | bool }}"
+      enabled:           "{{ fx_connector_enabled | default(False) | bool }}"
       # Used to run tasks only once per cluster. This will be true only on one of the nodes
-      cluster_run:    "{{ (fx_connector_cluster_members | default([ansible_hostname]) | sort | first == ansible_hostname) | bool }}"
+      cluster_run:       "{{ (fx_connector_cluster_members | default([ansible_hostname]) | sort | first == ansible_hostname) | bool }}"
       # General info
-      port:           "{{ fx_connector_port }}"
-      host:           "{{ fx_connector_host }}"
+      port:              "{{ fx_connector_port }}"
+      host:              "{{ fx_connector_host }}"
       # Database info
-      db_host:        "{{ fx_connector_db_host }}"
-      db_port:        "{{ fx_connector_db_port }}"
-      db_user:        "{{ fx_connector_db_user }}"
-      db_pass:        "{{ fx_connector_db_pass }}"
-      db_name:        "{{ fx_connector_db_name }}"
-      db_admin_user:  "{{ fx_connector_db_admin_user }}"
-      db_admin_pass:  "{{ fx_connector_db_admin_pass }}"
+      db_host:           "{{ fx_connector_db_host }}"
+      db_port:           "{{ fx_connector_db_port }}"
+      db_user:           "{{ fx_connector_db_user }}"
+      db_pass:           "{{ fx_connector_db_pass }}"
+      db_name:           "{{ fx_connector_db_name }}"
+      db_admin_user:     "{{ fx_connector_db_admin_user }}"
+      db_admin_pass:     "{{ fx_connector_db_admin_pass }}"
       # What SQL initializes the DB
-      db_sql_file:    connector.sql
+      db_sql_file:       connector.sql
       # What table to check to determine if the DB is initialized
-      db_check_table: public.c_db_schema_versions
-      # Override URL usually used as public interface
-      use_url:        "{{ fx_connector_use_url | default('') }}"
-      # If set to true, it will fill the HOST_MAP section on config-ilp.json
-      map_hosts:      "{{ fx_connector_map_hosts | default(False) }}"
-      config:         "{{ fx_connector_config }}"
+      db_check_table:   public.c_db_schema_versions
+      config:           "{{ fx_connector_config }}"
       # Prefix for the file names of certificates
-      crt_prefix:     "{{ fx_connector_crt_prefix }}"
+      crt_prefix:       "{{ fx_connector_crt_prefix }}"
       # URI query to check for the health of the service
-      health_query:   '/health'
+      health_query:      '/health'
       # What to check for in the answer to determine the health
-      health_json:    '"status": *"OK"'
+      health_json:       '"status": *"OK"'
+      # If a load balancer is present this must be filled with its URL and the
+      # role will take care of using this value where needed instead of the host
+      # data.
+      load_balancer_url: "{{ fx_connector_load_balancer_url }}"
+      # If a reverse proxy is present this must be filled with its URL and the
+      # role will take care of using this value where needed instead of the host
+      # data.
+      reverse_proxy_url: "{{ fx_connector_reverse_proxy_url }}"
 
     ilp_ledgers_extra_vars:
       # General info
-      name:           ilp_ledger
-      description:    ILP Ledger
-      # Tells if the component is enabled. It's always a boolean value
-      #enabled:        true
+      name:              ilp_ledger
+      description:       ILP Ledger
       # Used to run tasks only once per cluster. This will be true only on one of the nodes
-      cluster_run:    "{{ (ilp_ledgers_cluster_members | default([ansible_hostname]) | sort | first == ansible_hostname) | bool }}"
+      cluster_run:       "{{ (ilp_ledgers_cluster_members | default([ansible_hostname]) | sort | first == ansible_hostname) | bool }}"
       # What SQL initializes the DB
-      db_sql_file:    ledger.sql
+      db_sql_file:       ledger.sql
       # What table to check to determine if the DB is initialized
-      db_check_table: public.l_db_schema_versions
+      db_check_table:    public.l_db_schema_versions
       # Prefix for the file names of certificates
-      crt_prefix:     "{{ ledger_crt_prefix }}"
+      crt_prefix:        "{{ ledger_crt_prefix }}"
       # URI query to check for the health of the service
-      health_query:   '/health'
+      health_query:      '/health'
       # What to check for in the answer to determine the health
-      health_json:    '"status": *"OK"'
-      # If set to true, it will fill the HOST_MAP section on config-ilp.json
-      map_hosts:      false
+      health_json:       '"status": *"OK"'
 
 # NOTE: The various filter manipulate the various *_info_tmp dictionaries either
 # by building new values or changing existing ones. Refer to the end results that
@@ -188,3 +196,6 @@
 
 - name: "Ripple Solution Information"
   debug: var=ripple_solution_info
+
+# Uncomment to analyse the data structures
+#- fail:

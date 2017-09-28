@@ -8,6 +8,41 @@ import six
 import json
 from urlparse import urlparse
 from distutils.util import strtobool
+from ansible.module_utils.six.moves.urllib.parse import urlsplit
+
+
+def extract_url_info(data_dict, url_type):
+    """
+    Extract URL information from a key in a dictionary that contains a URL. It
+    then builds another key containing the split information.
+    """
+    url_key = "%s_url" % url_type
+    data_key = "%s_data" % url_type
+    data_dict = data_dict.copy()
+
+    if data_dict.get(url_key, '') != '':
+        url = urlparse(data_dict[url_key])
+
+        use_https = (url.scheme == 'https')
+        port = 80 if not use_https else 443
+        if url.port is not None:
+            port = url.port
+
+        data_dict[data_key] = {
+           'use_https': use_https,
+           'protocol': url.scheme,
+           'host': url.hostname,
+           'port': port,
+           'address': url.netloc,
+           'url': data_dict[url_key]
+        }
+        data_dict.update(data_dict[data_key])
+
+    else:
+        data_dict[url_key] = ''
+        data_dict[data_key] = {}
+
+    return data_dict
 
 
 def build_ripple_extra(value, rdbms='postgres', extra_vars={}):
@@ -23,7 +58,7 @@ def build_ripple_extra(value, rdbms='postgres', extra_vars={}):
         if not e_key in value:
             value[e_key] = e_value
 
-    # Service name
+    # Add the currency name to the ledgers
     if value['name'] == 'ilp_ledger':
         value['name'] = "%s_%s" % (value['name'], value['currency'].lower())
         value['description'] = "%s %s" % (value['description'], value['currency'].upper())
@@ -49,30 +84,31 @@ def build_ripple_extra(value, rdbms='postgres', extra_vars={}):
     value['address'] = service_address
 
     # Full URL
-    value['url'] = "%s://%s" % (service_protocol, service_address)
+    value['host_url'] = "%s://%s" % (service_protocol, service_address)
 
-    # Data specific to the host and not the service endpoint which can be
-    # different (See the attribute use_url)
-    value['host_data'] = {
-       'use_https': value['use_https'],
-       'protocol': value['protocol'],
-       'host': value['host'],
-       'port': value['port'],
-       'address': value['address'],
-       'url': value['url']
-    }
+    # Extract and save the host specific data
+    value = extract_url_info(value, 'host')
+    # Using a given Load Balancer. It has priority over the host data
+    value = extract_url_info(value, 'load_balancer')
+    # Using a given Reverse Proxy. It has priority over the load balancer data
+    value = extract_url_info(value, 'reverse_proxy')
 
-    # Using a given URL
-    if value.get('use_url', '') != '':
-        url = urlparse(value['use_url'])
-        value.update({
-           'use_https': (url.scheme == 'https'),
-           'protocol': url.scheme,
-           'host': url.hostname,
-           'port': url.port,
-           'address': url.netloc,
-           'url': value['use_url']
-        })
+    # Deciding if HOST_MAP is needed and what values to assign
+    value['map_component'] = {}
+    if value['reverse_proxy_url'] != '':
+        # Map the reverse proxy url to the host url
+        if value['reverse_proxy_url'] != value['host_url']:
+            value['map_component'].update({
+                'from': value['reverse_proxy_data'],
+                'to': value['host_data']
+            })
+
+        # If the load balancer is present, it must be used instead of the host data
+        if value['load_balancer_url'] != '' and value['reverse_proxy_url'] != value['load_balancer_url']:
+            value['map_component'].update({
+                'from': value['reverse_proxy_data'],
+                'to': value['load_balancer_data']
+            })
 
     # DB string
     db_string = "%s://%s:%s@%s:%s/%s" % (
@@ -238,10 +274,6 @@ def list_clear_ilp_passwords(key, ilpv_info, ilpv_ed25519, fxc_info, fxc_hmac, l
 
     return output
 
-from ansible.errors import AnsibleFilterError
-from ansible.module_utils.six.moves.urllib.parse import urlsplit
-from ansible.utils import helpers
-
 def split_url(value, query='', alias='urlsplit'):
     """
     This same function will be available from Ansible 2.4 with this same interface.
@@ -269,6 +301,15 @@ def split_url(value, query='', alias='urlsplit'):
         return results
 
 
+def reduce_or(values, start=0):
+    """
+    Used to check if a JSON comma is needed at the end of a section
+    """
+    if start > len(values) - 1:
+        return False
+    return reduce(lambda x, y: x or y, values[start:], False)
+
+
 class FilterModule(object):
     """ Ansible jinja2 filters """
 
@@ -279,6 +320,7 @@ class FilterModule(object):
             'list_clear_rc_passwords': list_clear_rc_passwords,
             'list_encrypted_ilp_passwords': list_encrypted_ilp_passwords,
             'list_clear_ilp_passwords': list_clear_ilp_passwords,
+            'reduce_or': reduce_or,
             'urlsplit': split_url
         }
 
