@@ -86,7 +86,8 @@ ripple_solution_use_certs: []
 ripple_solution_use_keys: []
 # - "{{ ssl_certificates_base }}/ca/ripple_solution_ca.key"
 
-# Certificates of remote parties used by Ripple.
+# Certificates of remote parties used by Ripple. These certificates will be
+# copied under the certificates directory of Ripple.
 ripple_solution_use_remote_certs: []
 # - "{{ ssl_certificates_base }}/ca/ripple_solution_ca.crt"
 
@@ -113,8 +114,10 @@ ripple_connect_db_admin_pass: ''
 # Partners Configuration and their credentials to connect to the local instance
 ripple_connect_partners: []
 # - address:  partner.example.com:5000
+#   # Credentials used by us to connect to the partner
 #   username: ripple_connect_user
 #   password: Passw0rd
+#   # Credentials used by the partner to connect to us
 #   partner_users:
 #    - username: ripple_connect_user
 #      password: Passw0rd
