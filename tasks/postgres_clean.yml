@@ -2,7 +2,7 @@
 # This file resets the databases
 
 - name: "Stop Ripple Solution"
-  service: name=ripple-solution state=stopped use=systemctl
+  service: name=ripple-solution state=stopped
   register: stop_ripple_solution
   ignore_errors: yes
 

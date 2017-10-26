@@ -59,8 +59,8 @@ def build_ripple_extra(value, rdbms='postgres', extra_vars={}):
             value[e_key] = e_value
 
     # Add the currency name to the ledgers
-    if value['name'] == 'ilp_ledger':
-        value['name'] = "%s_%s" % (value['name'], value['currency'].lower())
+    if 'ledger' in value['name'].lower():
+        value['name'] = "ilp_ledger_%s" % value['currency'].lower()
         value['description'] = "%s %s" % (value['description'], value['currency'].upper())
 
     # HTTPS Enabled

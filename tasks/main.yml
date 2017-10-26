@@ -1,16 +1,16 @@
 ---
 # This file is responsible to orchestrate the Ripple installation and configuration
 
-# Checks that the role has everything it needs
-- name: "Assumptions Check"
-  include: checks.yml
-  tags: [always, ripple-solution]
-
 # Some data structures are build and used to access information using loops and
 # other efficient methods.
 - name: "Build Data Structures"
   include: datastructs.yml
   no_log: "{{ ripple_solution_no_log | default(True) | bool }}"
+  tags: [always, ripple-solution]
+
+# Checks that the role has everything it needs
+- name: "Assumptions Check"
+  include: checks.yml
   tags: [always, ripple-solution]
 
 
