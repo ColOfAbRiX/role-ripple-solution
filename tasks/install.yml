@@ -36,10 +36,10 @@
   copy:
     src:    "{{ item.src }}"
     dest:   "{{ item.dest }}"
-    mode:   '0755'
+    mode:   '0750'
     force:  yes
-    owner:  "{{ ripple_solution_user }}"
-    group:  "{{ ripple_solution_group }}"
+    owner:  root
+    group:  root
     seuser: system_u
     serole: object_r
     setype: usr_t

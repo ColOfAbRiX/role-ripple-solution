@@ -37,8 +37,8 @@
   with_items:
    - "{{ (ilp_ledgers_accounts + ledger.accounts) | list }}"
 
-- name: "Update Accounts Fingerprint"
-  shell: "{{ knex_cmd }} <<< 'UPDATE l_accounts SET fingerprint=\"{{ item.fingerprint }}\", minimum_allowed_balance=\"{{ item.balance }}\", notification_url=\"{{ item.notifications }}\" WHERE account_name=\"{{ item.account }}\";'"
+- name: "Update Account"
+  shell: "{{ knex_cmd }} <<< \"UPDATE public.l_accounts SET fingerprint='{{ item.fingerprint }}', minimum_allowed_balance='{{ item.balance }}', notification_url='{{ item.notifications }}' WHERE account_name='{{ item.account }}';\""
   environment:
     KNEXSQL_DB: "{{ ledger.db_admin_string }}"
   changed_when: false

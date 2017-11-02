@@ -11,7 +11,7 @@
       # Tells if the component is enabled. It's always a boolean value
       enabled:           "{{ ripple_connect_enabled | default(False) | bool }}"
       # Used to run tasks only once per cluster. This will be true only on one of the nodes
-      cluster_run:       "{{ (ripple_connect_cluster_members | default([ansible_hostname]) | sort | first == ansible_hostname) | bool }}"
+      cluster_run:       "{{ (ripple_connect_cluster_members | default([ansible_fqdn]) | sort | first in [ansible_hostname, ansible_fqdn]) | bool }}"
       # General info
       port:              "{{ ripple_connect_port }}"
       host:              "{{ ripple_connect_host }}"
@@ -50,7 +50,7 @@
       # Tells if the component is enabled. It's always a boolean value
       enabled:           "{{ ilp_validator_enabled | default(False) | bool }}"
       # Used to run tasks only once per cluster. This will be true only on one of the nodes
-      cluster_run:       "{{ (ilp_validator_cluster_members | default([ansible_hostname]) | sort | first == ansible_hostname) | bool }}"
+      cluster_run:       "{{ (ilp_validator_cluster_members | default([ansible_fqdn]) | sort | first in [ansible_hostname, ansible_fqdn]) | bool }}"
       # General info
       port:              "{{ ilp_validator_port }}"
       host:              "{{ ilp_validator_host }}"
@@ -89,7 +89,7 @@
       # Tells if the component is enabled. It's always a boolean value
       enabled:           "{{ fx_connector_enabled | default(False) | bool }}"
       # Used to run tasks only once per cluster. This will be true only on one of the nodes
-      cluster_run:       "{{ (fx_connector_cluster_members | default([ansible_hostname]) | sort | first == ansible_hostname) | bool }}"
+      cluster_run:       "{{ (fx_connector_cluster_members | default([ansible_fqdn]) | sort | first in [ansible_hostname, ansible_fqdn]) | bool }}"
       # General info
       port:              "{{ fx_connector_port }}"
       host:              "{{ fx_connector_host }}"
@@ -126,7 +126,7 @@
       name:              ilp_ledger
       description:       ILP Ledger
       # Used to run tasks only once per cluster. This will be true only on one of the nodes
-      cluster_run:       "{{ (ilp_ledgers_cluster_members | default([ansible_hostname]) | sort | first == ansible_hostname) | bool }}"
+      cluster_run:       "{{ (ilp_ledgers_cluster_members | default([ansible_fqdn]) | sort | first in [ansible_hostname, ansible_fqdn]) | bool }}"
       # What SQL initializes the DB
       db_sql_file:       ledger.sql
       # What table to check to determine if the DB is initialized

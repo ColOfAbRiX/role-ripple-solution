@@ -347,8 +347,8 @@ fx_connector_reverse_proxy_url: ''
 # proxy (if present) is in front of the load balancer.
 fx_connector_load_balancer_url: ''
 
-# Name of the FX Connector account on the Ledgers
-fx_connector_ledger_user: connector
+# Name of the local FX Connector account on the Ledgers
+fx_connector_ledger_user: connector_local
 
 # The ILP Validator to associate with this FX Connector. Don't include here
 # local Validators that use the setting "ilp_validator_install_local=yes".

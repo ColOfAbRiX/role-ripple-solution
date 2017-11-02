@@ -60,7 +60,7 @@
   failed_when: "'Error' in result.stderr or
                 'error' in result.stderr or
                 'must be owner' in result.stderr"
-  when: "item.0.enabled and
+  when: "item.0.enabled | default(False) and
          item.0.cluster_run and
          'does not exist' in item.1.stderr"
   with_together:
