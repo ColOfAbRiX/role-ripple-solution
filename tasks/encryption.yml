@@ -41,7 +41,8 @@
   shell: node {{ ripple_solution_scripts_base }}/encrypt_string.js {{ item.0.key }} <<< '{{ item.0.password }}'
   changed_when: false
   register: encrypted_rc_passwords_output
-  when: item.0.password != item.1.stdout | default('')
+  when: item.0.password is defined and
+        item.0.password != item.1.stdout | default('')
   with_together:
    - "{{ cleartext_rc_passwords }}"
    - "{{ decrypted_rc_passwords.results }}"
