@@ -1,0 +1,23 @@
+---
+
+bind_service_name: named
+
+bind_packages:
+ - bind
+ - bind-utils
+
+# BIND data directory
+bind_dir: /var/named
+
+# BIND run directory
+bind_run: /run/named
+
+# Main config file
+bind_config: /etc/named.conf
+
+# Zone files included in the installation
+bind_default_zone_files:
+  - /etc/named.root.key
+  - /etc/named.rfc1912.zones
+
+bind_service: named

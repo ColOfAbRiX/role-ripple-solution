@@ -1,0 +1,67 @@
+---
+#
+# REQUIREMENTS
+#  - The machines listed below must exists
+#  - They must be reachable via SSH with the names present in this inventory
+#  - The user "ansible" must be present on the system and be able to sudo to root
+#
+
+all:
+  vars:
+    ansible_user: ansible
+
+  children:
+
+    #
+    # Example01 - Basic configuration
+    #  - One provider with one currency
+    #  - No reverse proxy
+    #  - No load balancers
+    #
+    example01:
+      hosts:
+        vmex01prov01:
+
+    #
+    # Example02 - Reverse proxy configuration
+    #  - One provider with one currency
+    #  - One reverse proxy per component for public access
+    #  - No load balancers
+    #
+    example02:
+      hosts:
+        vmex02prov01:
+
+    #
+    # Example03 - Load balancer configuration
+    #  - One redundant provider (2 instances) with one currency
+    #  - One load balancer per component
+    #  - No reverse proxy
+    #
+    example03:
+      vmex03prov01:
+      vmex03prov02:
+
+    #
+    # Example04 - Partner connectivity
+    #  - One conumer with 2 currencies
+    #  - One provider with 2 currencies
+    #  - No load balancers
+    #  - No reverse proxy
+    #
+    example04:
+      vmex04cons01:
+      vmex04prov01:
+
+    #
+    # Example05 - Full production example
+    #  - One redundant conumer (2 instances) with 2 currencies
+    #  - One redundant provider (2 instances) with 2 currencies
+    #  - One load balancer per component
+    #  - One reverse proxy per component for public access
+    #
+    example05:
+      vmex05cons01:
+      vmex05cons02:
+      vmex05prov01:
+      vmex05prov02:

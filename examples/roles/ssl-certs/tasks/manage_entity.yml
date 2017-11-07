@@ -1,0 +1,39 @@
+---
+
+- set_fact:
+    private_key:     "{{ entity.key | default(omit) }}"
+    certificate:     "{{ entity.certificate | default(omit) }}"
+    key_file:        "{{ entity.key_base | default(ssl_keys_base.path) }}/{{ entity.name }}.key"
+    csr_file:        "{{ entity.csr_base | default(ssl_csr_base.path) }}/{{ entity.name }}.csr"
+    cert_file:       "{{ entity.crt_base | default(ssl_certs_base.path) }}/{{ entity.name }}.crt"
+    local_key_file:  "{{ entity.store_key_base | default(ssl_store_keys_base) }}/{{ entity.name }}.key"
+    local_cert_file: "{{ entity.store_crt_base | default(ssl_store_certs_base) }}/{{ entity.name }}.crt"
+
+- include: "create_private_key.yml"
+  when: entity.key is defined
+
+- block:
+
+   - include: "create_certificate.yml"
+     when: entity.certificate is defined
+
+   - name: "Install Certificate"
+     copy:
+       src:     "{{ local_cert_file }}"
+       dest:    "/etc/pki/ca-trust/source/anchors/{{ cert_file | basename }}"
+       force:   yes
+       owner:   root
+       group:   root
+       mode:    '0644'
+       seuser:  system_u
+       serole:  object_r
+       setype:  cert_t
+     when: certificate.trust | default(False) | bool
+
+   - name: "Update SSL Certificate Authority Store"
+     command: update-ca-trust
+     async: 15
+     poll: 0
+     when: certificate.trust | default(False) | bool
+
+  when: entity.certificate is defined

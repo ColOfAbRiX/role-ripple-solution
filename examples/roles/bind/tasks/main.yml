@@ -1,0 +1,149 @@
+---
+# tasks file for bind
+
+- name: "Include OS-Specific Variables"
+  include_vars: "vars_{{ ansible_distribution | lower }}_{{ ansible_distribution_major_version }}.yml"
+  tags: bind
+
+- name: "Install BIND"
+  package:
+    name: "{{ item }}{% if bind_version not in ['', 'latest'] %}-{{ bind_version }}{% endif %}"
+    state: "{% if bind_version != 'latest' %}present{% else %}latest{% endif %}"
+  with_items: "{{ bind_packages }}"
+  tags: bind
+
+- name: "Log Directory"
+  file:
+    path:   "{{ bind_logfile_path | dirname }}"
+    state:  directory
+    owner:  "{{ bind_user }}"
+    group:  "{{ bind_group }}"
+    mode:   0755
+    seuser: system_u
+    serole: object_r
+    setype: named_log_t
+  tags: bind
+
+- name: "Runtime Directories"
+  file:
+    path:   "{{ item }}"
+    state:  directory
+    owner:  "{{ bind_user }}"
+    group:  "{{ bind_group }}"
+    mode:   0770
+    seuser: system_u
+    serole: object_r
+    setype: named_cache_t
+  with_items:
+    - "{{ bind_dir }}/dynamic"
+    - "{{ bind_dir }}/data"
+    - "{{ bind_dir }}/master"
+    - "{{ bind_dir }}/slaves"
+    - "{{ bind_dir }}/views"
+  tags: bind
+
+- name: "Main Configuration"
+  template:
+    src:      etc/named.conf.j2
+    dest:     "{{ bind_config }}"
+    owner:    "{{ bind_user }}"
+    group:    "{{ bind_group }}"
+    mode:     '0640'
+    seuser:   system_u
+    serole:   object_r
+    setype:   named_conf_t
+    validate: 'named-checkconf %s'
+  notify:
+   - "Restart BIND"
+  tags: bind
+
+- name: "Create Zone Serial"
+  command: date +%y%m%d%H
+  register: bind_timestamp
+  changed_when: false
+  tags: bind
+
+- name: "Create Master Zone Files"
+  template:
+    src:    var/named/master/zone_file.j2
+    dest:   "{{ bind_dir }}/master/{{ bind_zone.name }}"
+    owner:  "{{ bind_user }}"
+    group:  "{{ bind_group }}"
+    mode:   '0640'
+    seuser: system_u
+    serole: object_r
+    setype: named_zone_t
+    validate: 'named-checkzone -d {{ bind_zone.name }} %s'
+  notify:
+   - "Restart BIND"
+  with_items:
+   - "{{ bind_zones_master }}"
+  when: bind_zone.state | default('present') == 'present'
+  loop_control:
+    loop_var: bind_zone
+  tags: bind
+
+- name: "Remove Master Zone Files"
+  file:
+    path:  "{{ bind_dir }}/master/{{ item.name }}"
+    state: absent
+  notify:
+   - "Restart BIND"
+  with_items:
+   - "{{ bind_zones_master }}"
+  when: item.state | default('present') == 'absent'
+  tags: bind
+
+- name: "Create Reverse Lookup Zone Files"
+  template:
+    src:    var/named/master/reverse_zone.j2
+    dest:   "{{ bind_dir }}/master/{{ reverse_zone.network | reverse_dotted_decimals }}.in-addr.arpa"
+    owner:  "{{ bind_user }}"
+    group:  "{{ bind_group }}"
+    mode:   '0640'
+    seuser: system_u
+    serole: object_r
+    setype: named_zone_t
+    validate: 'named-checkzone -d {{ reverse_zone.network | reverse_dotted_decimals }}.in-addr.arpa %s'
+  notify:
+   - "Restart BIND"
+  with_items:
+   - "{{ bind_zones_master_reverse }}"
+  loop_control:
+    loop_var: reverse_zone
+  when: reverse_zone.state | default('present') == 'present'
+  tags: bind
+
+- name: "Remove Reverse Lookup Zone Files"
+  file:
+    path:  "{{ bind_dir }}/master/{{ item.network | reverse_dotted_decimals }}.in-addr.arpa"
+    state: absent
+  notify:
+   - "Restart BIND"
+  with_items:
+   - "{{ bind_zones_master_reverse }}"
+  when: item.state | default('present') == 'absent'
+  tags: bind
+
+- name: "Configure Logfile"
+  file:
+    path:   "{% if not bind_logfile_path | regex_search('^/') %}{{ bind_dir }}/{% endif %}{{ bind_logfile_path }}"
+    state:  touch
+    owner:  "{{ bind_user }}"
+    group:  "{{ bind_group }}"
+    mode:   '0600'
+    seuser: system_u
+    serole: object_r
+    setype: named_log_t
+  tags: bind
+
+- name: "Start BIND service"
+  service:
+    name:    "{{ bind_service }}"
+    state:   started
+    enabled: yes
+  tags: bind
+
+- name: "Force BIND Handlers"
+  meta: flush_handlers
+  tags: bind

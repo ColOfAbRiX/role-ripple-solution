@@ -1,0 +1,116 @@
+---
+
+- set_fact:
+    cert_subj_country:  "{{ certificate.country | default(ssl_country) }}"
+    cert_subj_email:    "{{ certificate.email | default(ssl_email) }}"
+    cert_subj_location: "{{ certificate.location | default(ssl_location) }}"
+    cert_subj_org:      "{{ certificate.organization | default(ssl_organization) }}"
+    cert_subj_org_unit: "{{ certificate.organizational_unit | default(ssl_organizational_unit) }}"
+    cert_subj_state:    "{{ certificate.state | default(ssl_state) }}"
+
+
+- name: "Use Custom Configuration File"
+  template:
+    src:    tmp/openssl.cnf.j2
+    dest:   /tmp/openssl.cnf
+    mode:   '0644'
+    force:  yes
+    owner:  root
+    group:  root
+    seuser: system_u
+    serole: object_r
+    setype: etc_t
+  changed_when: false
+
+- name: "{{ entity.name }} : Copy Local Certificate"
+  copy:
+    src:  "{{ local_cert_file }}"
+    dest: "{{ cert_file }}"
+  when: not entity.force_remote | default(False) | bool
+  ignore_errors: yes
+
+- name: "{{ entity.name }} : Force Creation of the Certificate"
+  file:
+    path: "{{ item }}"
+    state: absent
+  when: entity.force_create | default(False) | bool
+  with_items:
+   - "{{ csr_file }}"
+   - "{{ cert_file }}"
+
+## Self Signed Certificate ##
+
+- name: "{{ entity.name }} : Generate Self Signed Certificate"
+  shell: |
+    openssl req \
+      -config /tmp/openssl.cnf \
+      -new \
+      -x509 \
+      -{{ certificate.digest | default('sha256') }} \
+      -key {{ key_file }} \
+      -days {{ certificate.days | default(30) }} \
+      -out "{{ cert_file }}"
+  args:
+    creates: "{{ cert_file }}"
+  register: ss_certificate_creation
+  when: certificate.self_signed | default(False) | bool
+
+## Full Certificate ##
+
+- block:
+
+   - set_fact:
+       signing_key: "{{ (ssl_sequence | selectattr('name', 'equalto', certificate.signing_key)) | list | first }}"
+
+   - set_fact:
+       signing_key_file: "{{ signing_key.base_path | default(ssl_keys_base.path) }}/{{ signing_key.name }}.key"
+       signing_crt_file: "{{ signing_key.csr_base | default(ssl_certs_base.path) }}/{{ signing_key.name }}.crt"
+
+   - name: "{{ entity.name }} : Generate Certificate Signing Request"
+     shell: |
+       openssl req \
+         -config /tmp/openssl.cnf \
+         -new \
+         -key {{ key_file }} \
+         -out "{{ csr_file }}"
+     args:
+       creates: "{{ cert_file }}"
+
+   - name: "{{ entity.name }} : Sign CSR and Generate Certificate"
+     shell: |
+       openssl x509 \
+         -req \
+         -extfile /tmp/openssl.cnf \
+         -extensions v3_req \
+         -{{ certificate.digest | default('sha256') }} \
+         -days {{ certificate.days | default(30) }} \
+         -in "{{ csr_file }}" \
+         -CAkey "{{ signing_key_file }}" \
+         -CA "{{ signing_crt_file }}" \
+         -CAcreateserial \
+         -out "{{ cert_file }}"
+     args:
+       creates: "{{ cert_file }}"
+     register: certificate_creation
+
+  when: not certificate.self_signed | default(False) | bool
+
+
+- name: "{{ entity.name }} : Certificate File Permissions"
+  file:
+    path:   "{{ cert_file }}"
+    owner:  "{{ certificate.owner | default(omit) }}"
+    group:  "{{ certificate.group | default(omit) }}"
+    mode:   "{{ certificate.mode | default('0644') }}"
+    seuser: "{{ certificate.seuser | default(omit) }}"
+    serole: "{{ certificate.serole | default(omit) }}"
+    setype: "{{ certificate.setype | default(omit) }}"
+
+# If the key has been copied from locally, then this will have no effect
+- name: "{{ entity.name }} : Download Certificate"
+  fetch:
+    src:  "{{ cert_file }}"
+    dest: "{{ local_cert_file }}"
+    flat: yes
+  when: certificate.fetch | default(True) | bool and
+        (certificate_creation | changed or ss_certificate_creation | changed)

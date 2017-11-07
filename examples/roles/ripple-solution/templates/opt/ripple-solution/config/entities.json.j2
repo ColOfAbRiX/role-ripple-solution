@@ -12,10 +12,10 @@
 
     "connectors": [
 {% if fx_connector_enabled | bool and fx_connector_install_local | default(False) | bool %}
-      "{{ fx_connector_info.url }}"{% if ripple_connect_fx_connectors | default([]) %},{% endif %}
+      "{{ fx_connector_info.url }}"{% if ripple_connect_connectors | default([]) %},{% endif %}
 
 {% endif %}
-{% for item in ripple_connect_fx_connectors | default([]) %}
+{% for item in ripple_connect_connectors | default([]) %}
       "{{ item.url }}"{% if not loop.last %},{% endif %}
 
 {% endfor %}
@@ -26,10 +26,10 @@
       {
         "iri": "{{ ilp_validator_info.url }}",
         "public_key": "{{ validator_key.stdout_lines[0].split(' ')[2] }}"
-      }{% if ripple_connect_ilp_validators | default([]) %},{% endif %}
+      }{% if ripple_connect_validators | default([]) %},{% endif %}
 
 {% endif %}
-{% for item in ripple_connect_ilp_validators | default([]) %}
+{% for item in ripple_connect_validators | default([]) %}
       {
         "iri": "{{ item.iri }}",
         "public_key": "{{ item.public_key }}"

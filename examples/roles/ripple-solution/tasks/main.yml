@@ -1,0 +1,112 @@
+---
+# This file is responsible to orchestrate the Ripple installation and configuration
+
+# Some data structures are build and used to access information using loops and
+# other efficient methods.
+- name: "Build Data Structures"
+  include: datastructs.yml
+  no_log: "{{ ripple_solution_no_log | default(True) | bool }}"
+  tags: [always, ripple-solution]
+
+# Checks that the role has everything it needs
+- name: "Assumptions Check"
+  include: checks.yml
+  tags: [always, ripple-solution]
+
+
+# Repository and package installation
+- name: "Install Ripple Solution"
+  include: install.yml
+  tags: ripple-solution
+
+
+# To reset all the databases
+- name: "Cleanup DB"
+  delegate_to: localhost
+  include: "{{ ripple_solution_db_dialect }}_clean.yml"
+  when: ripple_solution_reset_db | default(False) | bool and
+        component.cluster_run
+  no_log: "{{ ripple_solution_no_log | default(True) | bool }}"
+  with_items:
+   - "{{ ripple_solution_info }}"
+  loop_control:
+    loop_var: component
+  tags: ripple-solution
+
+# Pre-steps to configure the chosen RDBMS
+- name: "Pre-Configuration RDBMS"
+  delegate_to: localhost
+  include: "{{ ripple_solution_db_dialect }}_pre.yml"
+  no_log: "{{ ripple_solution_no_log | default(True) | bool }}"
+  when: component.enabled | default(False) | bool and
+        component.cluster_run
+  with_items:
+   - "{{ ripple_solution_info }}"
+  loop_control:
+    loop_var: component
+  tags: ripple-solution
+
+# Creation of the databases and their objects
+- name: "Install Databases"
+  include: databases.yml
+  no_log: "{{ ripple_solution_no_log | default(True) | bool }}"
+  tags: ripple-solution
+
+# Pre-steps to configure the chosen RDBMS
+- name: "Post-Configuration RDBMS"
+  delegate_to: localhost
+  include: "{{ ripple_solution_db_dialect }}_post.yml"
+  no_log: "{{ ripple_solution_no_log | default(True) | bool }}"
+  when: component.enabled | default(False) | bool and
+        component.cluster_run
+  with_items:
+   - "{{ ripple_solution_info }}"
+  loop_control:
+    loop_var: component
+  tags: ripple-solution
+
+
+# Installs or create certificates and manage the file system permissions
+- name: "Create Certificates"
+  include: certificates.yml
+  no_log: "{{ ripple_solution_no_log | default(True) | bool }}"
+  tags: ripple-solution
+
+# Creates keys and key pairs
+- name: "Create Keys"
+  include: keys.yml
+  no_log: "{{ ripple_solution_no_log | default(True) | bool }}"
+  tags: ripple-solution
+
+# Encrypt passwords and find hashes of certificates
+- name: "Encryption and Hashes"
+  include: encryption.yml
+  no_log: "{{ ripple_solution_no_log | default(True) | bool }}"
+  tags: ripple-solution
+
+
+# Create the configuration files
+- name: "Ripple Configuration"
+  become_user: "{{ ripple_solution_user }}"
+  include: config.yml
+  tags: ripple-solution
+
+
+# Initialize the Ripple Solution services
+- name: "Initialization"
+  include: init.yml
+  when: ripple_solution_enabled | default(True) | bool
+  tags: ripple-solution
+
+
+# Create the accounts on the system
+- name: "Ledger Accounts"
+  include: accounts.yml
+  when: ripple_solution_enabled | default(True) | bool and
+        ledger.enabled and
+        ledger.cluster_run
+  with_items:
+   - "{{ ilp_ledgers_info | default([]) }}"
+  loop_control:
+    loop_var: ledger
+  tags: ripple-solution

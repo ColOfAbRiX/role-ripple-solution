@@ -1,0 +1,49 @@
+---
+# This file creates the acconuts on the ledgers
+
+- set_fact:
+    ilp_ledgers_accounts:
+     - account:       "{{ ripple_connect_ledger_user }}"
+       fingerprint:   "{{ fingerprints.results[ripple_connect_idx].stdout | default('') }}"
+       notifications: "{{ ripple_connect_info.url | default('') }}/ledger/notifications"
+       enabled:       "{{ ripple_connect_info.enabled and ripple_connect_install_local | default(False) | bool }}"
+       balance:       "-1000000"
+     - account:       "{{ fx_connector_ledger_user }}"
+       fingerprint:   "{{ fingerprints.results[fx_connector_idx].stdout | default('') }}"
+       notifications: "{{ fx_connector_info.url | default('') }}/notification"
+       enabled:       "{{ fx_connector_info.enabled and fx_connector_install_local | default(False) | bool }}"
+       balance:       "0"
+
+- name: "Create Accounts"
+  shell: |
+    "{{ ripple_solution_scripts_base }}/rs_requests.sh" \
+        "{{ ledger.url }}/account" \
+        --method PUT \
+        --cert "{{ admin_cert }}" \
+        --key "{{ admin_key }}" \
+        --ca "{{ ca_cert }}" \
+        --body "{
+            \"name\": \"{{ item.account }}\",
+            \"fingerprint\": \"{{ item.fingerprint }}\",
+            \"notification_url\": \"{{ item.notifications }}\",
+            \"minimum_allowed_balance\": \"{{ item.balance }}\"
+        }"
+  when: item.enabled | default(True)
+  register: result
+  failed_when: result.rc != 0 and
+               'UnmodifiableResourceError' not in result.stderr
+  changed_when: result.rc == 0 and
+               'UnmodifiableResourceError' not in result.stderr
+  with_items:
+   - "{{ (ilp_ledgers_accounts + ledger.accounts) | list }}"
+
+- name: "Update Account"
+  shell: "{{ knex_cmd }} <<< \"UPDATE public.l_accounts SET fingerprint='{{ item.fingerprint }}', minimum_allowed_balance='{{ item.balance }}', notification_url='{{ item.notifications }}' WHERE account_name='{{ item.account }}';\""
+  environment:
+    KNEXSQL_DB: "{{ ledger.db_admin_string }}"
+  changed_when: false
+  register: db_present
+  when: ledger.enabled and
+        ledger.cluster_run
+  with_items:
+   - "{{ (ilp_ledgers_accounts + ledger.accounts) | list }}"

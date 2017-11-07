@@ -1,0 +1,24 @@
+{%- if ripple_connect_info.enabled %}
+/var/log/ripple-solution/ripple-connect-err.log
+/var/log/ripple-solution/ripple-connect-out.log
+{% endif %}
+{%- if fx_connector_info.enabled %}
+/var/log/ripple-solution/connector-err.log
+/var/log/ripple-solution/connector-out.log
+{% endif %}
+{%- if ilp_validator_info.enabled %}
+/var/log/ripple-solution/validator-err.log
+/var/log/ripple-solution/validator-out.log
+{% endif %}
+{%- for ledger in ilp_ledgers | default([]) if ledger.enabled %}
+/var/log/ripple-solution/ledger{{ loop.index0 }}-err.log
+/var/log/ripple-solution/ledger{{ loop.index0 }}-out.log
+{% endfor %}
+/var/log/ripple-solution.log {
+        rotate 90
+        daily
+        compress
+        missingok
+        notifempty
+        create 644 {{ ripple_solution_user }} {{ ripple_solution_group }}
+}

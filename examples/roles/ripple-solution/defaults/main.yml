@@ -108,17 +108,11 @@ ripple_connect_db_port: 5432
 ripple_connect_db_user: user_rc
 ripple_connect_db_pass: Passw0rd
 ripple_connect_db_name: ripple_connect
-# Administrator credentials for the database
 ripple_connect_db_admin_user: ''
 ripple_connect_db_admin_pass: ''
 
-# Trusted certificates of external services
-ripple_connect_trusted_external_certs: []
-# - ripple_solution_ca.crt
-
 # Partners Configuration and their credentials to connect to the local instance
 ripple_connect_partners: []
-#   # Address of Ripple Connect
 # - address:  partner.example.com:5000
 #   # Credentials used by us to connect to the partner
 #   username: ripple_connect_user
@@ -128,14 +122,18 @@ ripple_connect_partners: []
 #    - username: ripple_connect_user
 #      password: Passw0rd
 
-# FX Connectors managed by Ripple Connect. Don't include here local Connectors
-# that use the setting "fx_connector_install_local=yes".
-ripple_connect_fx_connectors: []
+# Trusted certificates of external services
+ripple_connect_trusted_external_certs: []
+# - ripple_solution_ca.crt
+
+# Connectors managed by Ripple Connect. Don't include here local Connectors that
+# use the setting "fx_connector_install_local=yes".
+ripple_connect_connectors: []
 # - url: https://provider.example.com:3000
 
-# ILP Validators managed by Ripple Connect. Don't include here local Validators
-# that use the setting "ilp_validator_install_local=yes".
-ripple_connect_ilp_validators: []
+# Validators managed by Ripple Connect. Don't include here local Validators that
+# use the setting "ilp_validator_install_local=yes".
+ripple_connect_validators: []
 # - iri: https://provider.example.com:4000
 #   public_key: CRiRdYySjsPfSS5b7C17Vkx8/RCzhfzd77RGw54NkLY=
 
@@ -147,13 +145,6 @@ ripple_connect_ledgers: []
 ripple_connect_connector_validator_pairs: []
 # - connector_url: https://provider.example.com:3000
 #   validator_url: https://provider.example.com:4000
-
-# Connector accounts, on the remote ledgers, managed by Ripple Connect
-ripple_connect_nostro_accounts: []
-#   # Currency of the account
-# - currency: EUR
-#   # Address of the FX Connector that owns the account
-#   url: https://consumer.example.com:3000
 
 # If other Ripple Solution components are present on the machine, setting this
 # to true will configure the other components to use this Ripple Connect instance
@@ -257,7 +248,7 @@ ripple_connect_config: {}
 ilp_ledgers_cluster_members: ["{{ ansible_hostname }}"]
 ilp_ledgers: []
 #   # Service
-# - name: ledger_eur
+# - name: ledger_euro
 #   enabled: false
 #   port: 6000
 #   host: "{{ ansible_fqdn }}"
@@ -271,7 +262,6 @@ ilp_ledgers: []
 #   db_user: user_leur
 #   db_pass: Passw0rd
 #   db_name: ledger_eur
-#   # Administrator credentials for the database
 #   db_admin_user: ''
 #   db_admin_pass: ''
 #
@@ -284,19 +274,14 @@ ilp_ledgers: []
 #   install_local: true
 #
 #   # Trusted certificates of external services
-#   trusted_external_certs:
-#    - ripple_solution_ca.crt
+#   trusted_external_certs: []
+#   # - ripple_solution_ca.crt
 #
 #   # Accounts to create on the Ledger
-#   accounts:
-#    - account:       connector_customer
-#      # This is the fingerprint of the FX Connector certificate. It is used to
-#      # trust the actions requested to this ledger.
-#      fingerprint:   '46:0F:D7:68:B6:DA:4A:63:DE:DD:C6:00:00:54:BD:EE:6A:DB:6B:E1:89:FA:C2:27:1D:5B:AC:4B:50:18:50:1C'
-#      # Usually, when configuring a customer, this URL is the notification URL
-#      # for Ripple Connect
-#      notifications: 'https://provider.example.com:5000/ledger/notifications'
-#      balance:       0
+#   accounts: []
+#   # - account:       "{{ fx_connector_ledger_user }}"
+#   #   fingerprint:   '46:0F:D7:68:B6:DA:4A:63:DE:DD:C6:00:00:54:BD:EE:6A:DB:6B:E1:89:FA:C2:27:1D:5B:AC:4B:50:18:50:1C'
+#   #   notifications: 'https://provider.example.com:5000/ledger/notifications'
 #
 #   # If present, the URL of the reverse proxy. The role assumes that the reverse
 #   # proxy is in front of the load balancer (if present).
@@ -329,7 +314,6 @@ fx_connector_db_port: 5432
 fx_connector_db_user: user_fxc
 fx_connector_db_pass: Passw0rd
 fx_connector_db_name: fx_connector
-# Administrator credentials for the database
 fx_connector_db_admin_user: ''
 fx_connector_db_admin_pass: ''
 
@@ -399,7 +383,6 @@ ilp_validator_db_port: 5432
 ilp_validator_db_user: user_ilpv
 ilp_validator_db_pass: Passw0rd
 ilp_validator_db_name: ilp_validator
-# Administrator credentials for the database
 ilp_validator_db_admin_user: ''
 ilp_validator_db_admin_pass: ''
 

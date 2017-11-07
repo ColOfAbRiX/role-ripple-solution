@@ -1,0 +1,51 @@
+---
+# This file performs pre-creation steps for the databases
+
+- name: "Create Databases - {{ component.description }}"
+  postgresql_db:
+    login_host: "{{ component.db_host }}"
+    login_user: "{{ component.db_admin_user }}"
+    login_password: "{{ component.db_admin_pass }}"
+    port:       "{{ component.db_port }}"
+    name:       "{{ component.db_name }}"
+    encoding:   UTF-8
+    template:   template0
+
+- name: "Create Users - {{ component.description }}"
+  postgresql_user:
+    login_host: "{{ component.db_host }}"
+    login_user: "{{ component.db_admin_user }}"
+    login_password: "{{ component.db_admin_pass }}"
+    port:       "{{ component.db_port }}"
+    name:       "{{ component.db_user }}"
+    password:   "{{ component.db_pass }}"
+    db:         "{{ component.db_name }}"
+    priv:       ALL
+    role_attr_flags: NOSUPERUSER,NOCREATEDB
+    no_password_changes: yes
+
+- name: "Create Monitoring Users - {{ component.description }}"
+  postgresql_user:
+    login_host: "{{ component.db_host }}"
+    login_user: "{{ component.db_admin_user }}"
+    login_password: "{{ component.db_admin_pass }}"
+    port:       "{{ component.db_port }}"
+    name:       "{{ ripple_solution_db_monitor_user }}"
+    password:   "{{ ripple_solution_db_monitor_pass }}"
+    db:         "{{ component.db_name }}"
+    priv:       ALL
+    role_attr_flags: NOSUPERUSER,NOCREATEDB
+    no_password_changes: yes
+  when: ripple_solution_db_monitor_enabled | default(False) | bool
+
+- name: "Lock DB for Other Users - {{ component.description }}"
+  postgresql_privs:
+    login_host: "{{ component.db_host }}"
+    login_user: "{{ component.db_admin_user }}"
+    login_password: "{{ component.db_admin_pass }}"
+    port:       "{{ component.db_port }}"
+    db:         "{{ component.db_name }}"
+    role:       PUBLIC
+    type:       database
+    priv:       ALL
+    state:      absent

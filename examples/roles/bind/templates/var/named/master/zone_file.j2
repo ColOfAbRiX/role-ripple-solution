@@ -1,0 +1,81 @@
+{% macro name(record, value='') %}{{ (record.name | default(value)).ljust(fs[0]) }}{% endmacro %}
+{% macro ttl_class(record) %}{{ (record.ttl | default('')).ljust(fs[1]) }} {{ (record.class | default('IN')).ljust(fs[2]) }}{% endmacro %}
+{% set fs = [40, 5, 6, 5] %}{# Fields alignment #}
+{% set zone_name = bind_zone.name + "." %}
+; Zone file for "{{ zone_name }}"
+; {{ ansible_managed }}
+
+{# Directives #}
+{% if bind_zone.global_origin | default(True) -%}
+$ORIGIN {{ zone_name }}
+{% endif %}
+{% if bind_zone.global_ttl | default(True) -%}
+$TTL    {{ bind_zone.zone_ttl | default(bind_default_ttl) }}
+{% endif %}
+
+{# Start of Authority Records #}
+; Start of Authority (http://www.zytrax.com/books/dns/ch8/soa.html)
+{% if bind_zone.name_servers | default([]) != [] and bind_zone.rrecord_soa | default({}) == {} %}
+{{ "@".ljust(fs[0]) }} {{ ttl_class(bind_zone) }} SOA     {{ (bind_zone.name_servers | first).name }}.{{ zone_name }}  {{ bind_zone.email_addr | default(bind_default_email_addr) }}.{{ zone_name }}  {{ bind_timestamp.stdout }}  {{ bind_zone.time_to_refresh | default(bind_default_time_to_refresh) }}  {{ bind_zone.time_to_retry | default(bind_default_time_to_retry) }}  {{ bind_zone.time_to_expire | default(bind_default_time_to_expire) }}  {{ bind_zone.nx_ttl | default(bind_default_nx_ttl) }}
+{% else %}
+{{ name(bind_zone.rrecord_soa, value='@') }} {{ ttl_class(bind_zone.rrecord_soa) }} SOA     {{ bind_zone.rrecord_soa.server_name.ljust(fs[3]) }}.  {{ bind_zone.rrecord_soa.email_addr }}.  {{ bind_timestamp.stdout }}  {{ bind_zone.rrecord_soa.time_to_refresh | default(bind_default_time_to_refresh) }}  {{ bind_zone.rrecord_soa.time_to_retry | default(bind_default_time_to_retry) }}  {{ bind_zone.rrecord_soa.time_to_expire | default(bind_default_time_to_expire) }}  {{ bind_zone.rrecord_soa.nx_ttl | default(bind_default_nx_ttl) }}
+{% endif %}
+
+{# Name Server Records #}
+; Name Server Records (http://www.zytrax.com/books/dns/ch8/ns.html)
+{% for record in bind_zone.name_servers | default([]) %}
+{{ zone_name.ljust(fs[0]) }} {{ ttl_class(record) }} NS      {{ record.name }}.{{ zone_name }}
+{% endfor %}
+{% for record in bind_zone.rrecords_ns | default([]) %}
+{{ name(record) }} {{ ttl_class(record) }} NS      {{ record.target }}
+{% endfor %}
+{# Mail Exchange Records #}
+{% if bind_zone.rrecords_mx | default([]) != [] %}
+
+; Mail Exchange Records (http://www.zytrax.com/books/dns/ch8/mx.html)
+{% for record in bind_zone.rrecords_mx | default([]) %}
+{{ name(record, value='@') }} {{ttl_class(record) }} MX      {{ (record.preference | string).ljust(fs[3]) }} {{ record.name }}
+{% endfor %}
+{% endif %}
+{% if bind_zone.name_servers | default([]) or bind_zone.rrecords_mx | default([]) or bind_zone.rrecords_a | default([]) %}
+{# IPv4 Address Records #}
+
+; IPv4 Address Records (http://www.zytrax.com/books/dns/ch8/a.html)
+{% for record in bind_zone.name_servers | default([]) %}
+{{ name(record) }} {{ ttl_class(record) }} A       {{ record.address }}
+{% endfor %}
+{% for record in bind_zone.rrecords_mx | default([]) if record.owner is not defined %}
+{{ name(record) }} {{ ttl_class(record) }} A       {{ record.address }}
+{% endfor %}
+{% for record in bind_zone.rrecords_a | default([]) %}
+{{ name(record) }} {{ ttl_class(record) }} A       {{ record.address }}
+{% endfor %}
+{% endif %}
+{% if bind_zone.rrecords_cname | default([]) != [] %}
+{# Canonical Name Records #}
+
+; Canonical Name Records (http://www.zytrax.com/books/dns/ch8/cname.html)
+{% for record in bind_zone.rrecords_cname | default([]) %}
+{{ name(record) }} {{ ttl_class(record) }} CNAME   {{ record.canonical_name }}
+{% endfor %}
+{% endif %}
+{# Text Records #}
+{% if bind_zone.rrecords_txt | default([]) != [] %}
+
+; Text Records (http://www.zytrax.com/books/dns/ch8/txt.html)
+{% for record in bind_zone.rrecords_txt | default([]) %}
+{{ name(record) }} {{ ttl_class(record) }} TXT     "{{ record.text }}"
+{% endfor %}
+{% endif %}
+{% if bind_zone.rrecords_srv | default([]) != [] %}
+
+; Services Records (http://www.zytrax.com/books/dns/ch8/srv.html)
+{% for record in bind_zone.rrecords_srv | default([]) if record.owner is not defined %}
+{{ ("_" + record.service + "._" + record.protocol).ljust(fs[0]) }} {{ ttl_class(record) }} SRV     {{ (record.priority | default(0) | string).ljust(fs[3]) }} {{ (record.weight | default(0) | string).ljust(5) }} {{ (record.port | string).ljust(5) }} {{ record.target }}
+{% endfor %}
+{% for record in bind_zone.rrecords_srv | default([]) if record.owner is defined %}
+{{ ("_" + record.service + "._" + record.protocol + "." + record.owner).ljust(fs[0]) }} {{ ttl_class(record) }} SRV     {{ (record.priority | default(0) | string).ljust(fs[3]) }} {{ (record.weight | default(0) | string).ljust(5) }} {{ (record.port | string).ljust(5) }} {{ record.target }}
+{% endfor %}
+{% endif %}
+
+; vim: ft=bindzone:fo-=t

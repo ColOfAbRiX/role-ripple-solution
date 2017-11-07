@@ -1,0 +1,30 @@
+---
+# This file starts and checks the ripple services
+
+- name: "Start Ripple Solution"
+  service: name=ripple-solution state=started enabled=yes
+  register: ripple_solution_start
+
+- name: "Restart Ripple Solution"
+  service: name=ripple-solution state=restarted
+  when:  not ripple_solution_start | changed and (
+           config_files_status | changed or
+           existing_certs_status | changed or
+           created_certs_status | changed or
+           ripple_solution_reset_db | default(False) | bool
+         )
+
+- name: "Wait for all Services to Start"
+  no_log: "{{ ripple_solution_no_log | default(True) | bool }}"
+  wait_for:
+    # Initial delay of 5 second for each member of the cluster
+    delay:   "{{ 5 * ([ripple_connect_cluster_members | length, ilp_ledgers_cluster_members | length, fx_connector_cluster_members | length, ilp_validator_cluster_members | length] | max) }}"
+    timeout: 30
+    host:    "{{ item.host_data.host }}"
+    port:    "{{ item.host_data.port }}"
+  when: item.enabled
+  with_items:
+   - "{{ ripple_solution_info }}"
+
+- name: "Log Files Permissions"
+  shell: chmod go+r /var/log/ripple-solution/*

@@ -1,0 +1,5 @@
+---
+# handlers file for bind
+
+- name: "Restart BIND"
+  service: name="{{ bind_service_name }}" state=restarted

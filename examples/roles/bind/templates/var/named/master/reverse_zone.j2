@@ -1,0 +1,45 @@
+{% macro ttl_class(record) %}{{ (record.ttl | default('')).ljust(fs[1]) }} {{ (record.class | default('IN')).ljust(fs[2]) }}{% endmacro %}
+{% set fs = [20, 5, 5, 5] %}{# Fields alignment #}
+{% set reverse_zone_name = reverse_zone.network | reverse_dotted_decimals + ".in-addr.arpa." %}
+{% set zone = bind_zones_master | selectattr("name", "equalto", reverse_zone.use_forward_zone | default('') ) | list | first | default([]) %}
+{% set default_domain = zone.name | default('') %}
+; Reverse lookup zone file for "{{ reverse_zone_name }}"
+; {{ ansible_managed }}
+
+{# Directives #}
+{% if bind_zone.global_origin | default(True) -%}
+$ORIGIN {{ reverse_zone_name }}
+{% endif %}
+{% if bind_zone.global_ttl | default(True) -%}
+$TTL    {{ reverse_zone.zone_ttl | default(bind_default_ttl) }}
+{% endif %}
+
+{# Start of Authority #}
+; Start of Authority (http://www.zytrax.com/books/dns/ch8/soa.html)
+{{ "@".ljust(fs[0]) }} {{ ttl_class(reverse_zone) }} SOA     {{ (reverse_zone.name_servers | first).name }}  {{ reverse_zone.email_addr | default(bind_default_email_addr) }}  {{ bind_timestamp.stdout }}  {{ reverse_zone.time_to_refresh | default(bind_default_time_to_refresh) }}  {{ reverse_zone.time_to_retry | default(bind_default_time_to_retry) }}  {{ reverse_zone.time_to_expire | default(bind_default_time_to_expire) }}  {{ reverse_zone.nx_ttl | default(bind_default_nx_ttl) }}
+
+{# Name Server Records #}
+; Name Server Records (http://www.zytrax.com/books/dns/ch8/ns.html)
+{% for record in reverse_zone.name_servers | default([ansible_hostname]) %}
+{{ "@".ljust(fs[0]) }} {{ ttl_class(record) }} NS      {{ record.name }}{% if not record.name | is_dns_fqdn %}.{{ record.domain | default(default_domain) }}.{% endif %}
+
+{% endfor %}
+{% for forward_zone in bind_zones_master %}
+{# Pointer Records for defined A records #}
+
+; Pointer Records for the zone "{{ forward_zone.name }}"
+{% for record in zone.rrecords_a | sort(attribute='address') if record.address | regex_search("^" + reverse_zone.network + ".") %}
+{{ (record.address | regex_replace("^" + reverse_zone.network + "\.", '')).ljust(fs[0]) }} {{ ttl_class(record) }} PTR     {{ record.name }}.{{ forward_zone.name }}.
+{% endfor %}
+{% endfor %}
+{% if reverse_zone | length > 0 %}
+{# Pointer Records #}
+
+; Pointer Records (http://www.zytrax.com/books/dns/ch8/ptr.html)
+{% for record in reverse_zone.rrecords_ptr | default([]) | sort(attribute='name') %}
+{{ (record.name | default(value)).ljust(fs[0]) }} {{ ttl_class(record) }} PTR     {{ record.target }}{% if not record.target | is_dns_fqdn %}.{{ record.domain | default(default_domain) }}.{% endif %}
+
+{% endfor %}
+{% endif %}
+
+; vim: ft=bindzone:ts=4:sw=4

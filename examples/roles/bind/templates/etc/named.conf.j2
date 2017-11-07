@@ -1,0 +1,107 @@
+//
+// named.conf - {{ ansible_managed }}
+//
+{# ACLs #}
+{% if bind_acls is defined and bind_acls %}
+
+/* Access Control Lists definitions */
+{{ bind_acls | default([]) | compute_config }}
+{% endif %}
+{# Options #}
+{% if bind_options is defined and bind_options %}
+
+/* Main BIND options */
+{{ [{
+  'name': 'options',
+  'block': bind_options + bind_options_additional | default([])
+}] | compute_config }}
+{% endif %}
+{# Logging #}
+{% if bind_logging is defined and bind_logging %}
+
+/* Logging */
+{{ [{
+  'name': 'logging',
+  'block': bind_logging + bind_logging_additional | default([])
+}] | compute_config }}
+{% endif %}
+{# Includes #}
+{% if bind_includes is defined and bind_includes %}
+
+/* Includes section */
+{{ (bind_includes + bind_includes_additional | default([])) | compute_config }}
+{% endif %}
+{# Zones #}
+{% if bind_zones is defined and bind_zones %}
+
+/* Zones */
+{{ (bind_zones + bind_zones_additional | default([])) | compute_config }}
+{% endif %}
+{# Master Zones #}
+{% if bind_zones_master is defined and bind_zones_master %}
+{% for zone in bind_zones_master | default([]) if zone.state | default('present') == 'present' -%}
+
+/* Master zone "{{ zone.name }}" */
+{{ [{
+  'name': 'zone',
+  'value': '"' + zone.name + '"',
+  'options': ['IN'],
+  'block': [
+      {'name': 'type', 'value': 'master'},
+      {'name': 'file', 'value': '"master/' + zone.name + '"'}
+    ] + zone.configuration | default([])
+}] | compute_config }}
+{% endfor %}
+{% endif %}
+{# Master Reverse Lookup Zones #}
+{% if bind_zones_master_reverse is defined and bind_zones_master_reverse %}
+{% for reverse_zone in bind_zones_master_reverse | default([]) if reverse_zone.state | default('present') == 'present' -%}
+
+/* Master reverse-lookup zone "{{ reverse_zone.network }}" */
+{% set reverse_zone_name = reverse_zone.network | reverse_dotted_decimals + ".in-addr.arpa" %}
+{{ [{
+  'name': 'zone',
+  'value': '"' + reverse_zone_name + '"',
+  'options': ['IN'],
+  'block': [
+      {'name': 'type', 'value': 'master'},
+      {'name': 'file', 'value': '"master/' + reverse_zone_name + '"'}
+    ] + reverse_zone.configuration | default([])
+}] | compute_config }}
+{% endfor %}
+{% endif %}
+{# Masters #}
+{% if bind_masters is defined and bind_masters %}
+
+/* Referenced masters */
+{{ bind_masters | compute_config }}
+{% endif %}
+{# Server #}
+{% if bind_server is defined and bind_server %}
+
+/* Behaviour with remotes servers */
+{{ bind_server | compute_config }}
+{% endif %}
+{# Views #}
+{% if bind_view is defined and bind_view %}
+
+/* Views */
+{{ bind_view | compute_config }}
+{% endif %}
+{# Statistics #}
+{% if bind_statistics_channels is defined and bind_statistics_channels %}
+
+/* Statistics Channels */
+{{ [{
+  'name': 'statistics-channels',
+  'block': bind_statistics_channels
+}] | compute_config }}
+{% endif %}
+{# Controls #}
+{% if bind_controls %}
+
+/* Channel configuration for RNDC */
+{{ write_named_config(bind_controls) }}
+{% endif %}
+
+// vim: ft=named:ts=4:sw=4

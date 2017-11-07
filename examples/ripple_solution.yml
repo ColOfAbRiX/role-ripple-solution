@@ -1,0 +1,18 @@
+- hosts: "{{ target_example }}"
+  serial: 1
+  pre_tasks:
+   - name: "Pre-creation of SSL Base Directory"
+     file: path="{{ ssl_base.path }}" state=directory recurse=yes
+     tags: ssl-certs
+   # CREATE USERS AND GROUPS
+  roles:
+   - role: ssl-certs
+     ssl_store_base:  "{{ ripple_ssl_store_base | default(omit) }}"
+     ssl_sequence:    "{{ ripple_ssl_sequence | default([]) }}"
+
+- hosts: "{{ target_example }}"
+  pre_tasks: []
+   # OPEN PORTS OR DISABLE FIREWALL}
+  roles:
+   - role: bind
+   - role: ripple-solution

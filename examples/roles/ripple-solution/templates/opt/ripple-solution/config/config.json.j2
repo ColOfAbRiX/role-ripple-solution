@@ -1,0 +1,22 @@
+{
+  "quote_expiration_mins": {{ ripple_connect_config.quote_expiration_mins }},
+  "sending_payment_expiration_offset_mins": {{ ripple_connect_config.sending_payment_expiration_offset_mins }},
+  "settlement_payment_expiration_offset_mins": {{ ripple_connect_config.settlement_payment_expiration_offset_mins }},
+  "receiving_payment_expiration_offset_mins": {{ ripple_connect_config.receiving_payment_expiration_offset_mins }},
+  "log_level": "{{ ripple_connect_config.log_level }}",
+  "secrets_file_path": "{{ ripple_connect_config.secrets_file_path }}",
+  "settlement_expiry_duration_seconds": {{ ripple_connect_config.settlement_expiry_duration_seconds }},
+  "access_token_expiration_hours": {{ ripple_connect_config.access_token_expiration_hours }},
+  "access_token_length": {{ ripple_connect_config.access_token_length }},
+  "message_length_max": {{ ripple_connect_config.message_length_max }},
+  "sending_fee_percentage": {{ ripple_connect_config.sending_fee_percentage }},
+  "receiving_fee_percentage": {{ ripple_connect_config.receiving_fee_percentage }},
+  "sending_fee_amount": {{ ripple_connect_config.sending_fee_amount }},
+  "receiving_fee_amount": {{ ripple_connect_config.receiving_fee_amount }},
+  "receiver_auto_accept_quote": {{ ripple_connect_config.receiver_auto_accept_quote }},
+  "amount_decimal_scale": {{ ripple_connect_config.amount_decimal_scale }},
+  "api_prefix": "{{ ripple_connect_config.api_prefix }}",
+  "currency_specific_fees": {{ ripple_connect_config.currency_specific_fees | to_nice_json | indent(2, False) }},
+  "requested_additional_info": {{ ripple_connect_config.requested_additional_info | to_nice_json | indent(2, False) }},
+  "payment_labels": {{ ripple_connect_config.payment_labels | to_nice_json | indent(2, False) }}
+}

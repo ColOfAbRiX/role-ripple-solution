@@ -1,0 +1,155 @@
+{% macro write_encrypted_string(index) -%}
+{% if 'stdout' in encrypted_ilp_strings[index] %}{{ encrypted_ilp_strings[index].stdout }}{% else %}{{ existing_encrypted_ilp_strings[index].string }}{% endif %}
+{%- endmacro %}
+{% macro host_map(tmp) -%}
+    "HOST_MAP": {
+{% for comp in ripple_solution_info if comp.enabled and comp.map_component | default({}) != {} %}
+      "{{ comp.map_component.from.address }}": "{{ comp.map_component.to.address }}"{% if not loop.last %},{% endif %}
+
+{% endfor %}
+    }
+{%- endmacro %}
+{% set enabled_comps = [ripple_connect_enabled] + ilp_ledgers_info | map(attribute='enabled') | list + [ilp_validator_info.enabled, fx_connector_info.enabled] %}
+{% set enabled_ldg_creds = ilp_ledgers_info | map(attribute='enabled') | list + [fx_connector_ledgers | default([]) | length > 0] %}
+{
+{# # #  RIPPLE CONNECT  # # #}
+{% if ripple_connect_enabled | bool %}
+  "ripple-connect": {
+    "RC_CONFIGS_PATH": "{{ ripple_solution_config_base }}",
+    "RC_SECRETS_ENCRYPTED": {{ ripple_connect_secrets_encrypted }},
+    "RC_ENABLE_UI": {{ ripple_connect_enable_ui }},
+    {{ host_map(ripple_connect_info.map_hosts) }}
+  }{% if enabled_comps | reduce_or(1) %},{% endif %}
+
+
+{% endif %}
+{# # #  LEDGERS  # # #}
+{% for ledger in ilp_ledgers_info %}
+{% if ledger.enabled %}
+  "ledger{{ loop.index0 }}": {
+    "LEDGER_HOSTNAME": "{{ ledger.host_data.host }}",
+    "LEDGER_PORT": {{ ledger.host_data.port }},
+{% if ripple_solution_encrypt_secrets | default(True) | bool %}
+    "ENCRYPTED_LEDGER_DB_URI": "{{ write_encrypted_string(ledgers_db_uri_idx + loop.index0) }}",
+    "ENCRYPTED_LEDGER_DB_URI_DECRYPTION_KEY": "{{ admin_key }}",
+{% else %}
+    "LEDGER_DB_URI": "{{ ledger.db_string }}",
+{% endif %}
+    "LEDGER_ADMIN_FINGERPRINT": "{{ fingerprints.results[admin_crt_idx | int].stdout }}",
+    "LEDGER_AMOUNT_SCALE": {{ ripple_connect_config.amount_decimal_scale }},
+{% for key, value in (ledger.config | default({})).iteritems() %}
+    "LEDGER_{{ key | upper }}": "{{ value }}",
+{% endfor %}
+    "LEDGER_TLS_KEY": "{{ key_path }}/{{ ledger.crt_prefix }}.key",
+    "LEDGER_TLS_CERTIFICATE": "{{ cert_path }}/{{ ledger.crt_prefix }}.crt",
+    "LEDGER_TLS_CAS": [
+{% for cert in ledger.trusted_external_certs | default([]) %}
+      "{{ cert_ext_path }}/{{ cert }}",
+{% endfor %}
+      "{{ ca_cert }}"
+    ],
+    {{ host_map(ledger.map_hosts) }}
+  }{% if enabled_comps | reduce_or(2 + loop.index0) %},{% endif %}
+
+
+{% endif %}
+{% endfor %}
+{# # #  ILP VALIDATOR  # # #}
+{% if ilp_validator_enabled | default(False) | bool %}
+  "validator": {
+    "VALIDATOR_HOSTNAME": "{{ ilp_validator_info.host_data.host }}",
+    "VALIDATOR_PORT": {{ ilp_validator_info.host_data.port }},
+{% if ripple_solution_encrypt_secrets | default(True) | bool %}
+    "ENCRYPTED_VALIDATOR_DB_URI": "{{ write_encrypted_string(ilp_validator_db_uri_idx) }}",
+    "ENCRYPTED_VALIDATOR_DB_URI_DECRYPTION_KEY": "{{ admin_key }}",
+    "ENCRYPTED_VALIDATOR_ED25519_SECRET_KEY": "{{ write_encrypted_string(ilp_validator_ed25519_secret_key_idx) }}",
+    "ENCRYPTED_VALIDATOR_ED25519_SECRET_KEY_DECRYPTION_KEY": "{{ admin_key }}",
+{% else %}
+    "VALIDATOR_DB_URI": "{{ ilp_validator_info.db_string }}",
+    "VALIDATOR_ED25519_SECRET_KEY": "{{ validator_ed25519_secret_key }}",
+{% endif %}
+    "VALIDATOR_ED25519_PUBLIC_KEY": "{{ validator_ed25519_public_key }}",
+{% for key, value in (ilp_validator_config | default({})).iteritems() %}
+    "VALIDATOR_{{ key | upper }}": "{{ value }}",
+{% endfor %}
+    "VALIDATOR_TLS_KEY": "{{ key_path }}/{{ validator_crt_prefix }}.key",
+    "VALIDATOR_TLS_CERTIFICATE": "{{ cert_path }}/{{ validator_crt_prefix }}.crt",
+    "VALIDATOR_TLS_CAS": [
+{% for cert in ilp_validator_trusted_external_certs | default([]) %}
+      "{{ cert_ext_path }}/{{ cert }}",
+{% endfor %}
+      "{{ ca_cert }}"
+    ],
+    {{ host_map(ilp_validator_info.map_hosts) }}
+  }{% if enabled_comps | reduce_or(2 + ilp_ledgers_info | length) %},{% endif %}
+
+
+{% endif %}
+{# # #  FX CONNECTOR  # # #}
+{% if fx_connector_enabled | default(False) | bool %}
+  "connector": {
+    "CONNECTOR_PORT": {{ fx_connector_info.host_data.port }},
+{% if ripple_solution_encrypt_secrets | default(True) | bool %}
+    "ENCRYPTED_CONNECTOR_DB_URI": "{{ write_encrypted_string(fx_connector_db_uri_idx) }}",
+    "ENCRYPTED_CONNECTOR_DB_URI_DECRYPTION_KEY": "{{ admin_key }}",
+    "ENCRYPTED_CONNECTOR_QUOTE_HMAC_KEY": "{{ write_encrypted_string(fx_connector_quote_hmac_key_idx) }}",
+    "ENCRYPTED_CONNECTOR_QUOTE_HMAC_KEY_DECRYPTION_KEY": "{{ admin_key }}",
+{% else %}
+    "CONNECTOR_DB_URI": "{{ fx_connector_info.db_string }}",
+    "CONNECTOR_QUOTE_HMAC_KEY": "{{ connector_quote_hmac_key }}",
+{% endif %}
+    "CONNECTOR_ADMIN_FINGERPRINT": "{{ fingerprints.results[admin_crt_idx | int].stdout }}",
+{% for key, value in (fx_connector_config | default({})).iteritems() %}
+    "CONNECTOR_{{ key | upper }}": "{{ value }}",
+{% endfor %}
+    "CONNECTOR_TLS_KEY": "{{ key_path }}/{{ fx_connector_crt_prefix }}.key",
+    "CONNECTOR_TLS_CERTIFICATE": "{{ cert_path }}/{{ fx_connector_crt_prefix }}.crt",
+    "CONNECTOR_TLS_CAS": [
+{% for cert in fx_connector_trusted_external_certs | default([]) %}
+      "{{ cert_ext_path }}/{{ cert }}",
+{% endfor %}
+      "{{ ca_cert }}"
+    ],
+    "CONNECTOR_LEDGER_CREDENTIALS": {
+{% for ledger in ilp_ledgers_info | default([]) if ledger.enabled %}
+      "{{ ledger.url }}/account/{{ fx_connector_ledger_user }}": {
+        "authorized_access_fingerprints": [
+          "{{ fingerprints.results[ripple_connect_idx | int].stdout }}"
+        ],
+        "cert": "{{ cert_path }}/{{ fx_connector_crt_prefix }}.crt",
+        "key": "{{ key_path }}/{{ fx_connector_crt_prefix }}.key",
+        "ca": [
+          "{{ ca_cert }}"
+        ]
+      }{% if enabled_ldg_creds | reduce_or(1 + loop.index0) %},{% endif %}
+
+{% endfor %}
+{% for ledger in fx_connector_ledgers | default([]) %}
+      "{{ ledger.url }}/account/{{ fx_connector_ledger_user }}": {
+        "authorized_access_fingerprints": [
+{% for f in ledger.fingerprints | default([]) %}
+          "{{ f }}"{% if not loop.last %},{% endif %}
+
+{% endfor %}
+        ],
+        "cert": "{{ cert_path }}/{{ fx_connector_crt_prefix }}.crt",
+        "key": "{{ key_path }}/{{ fx_connector_crt_prefix }}.key",
+        "ca": [
+          "{{ cert_ext_path }}/{{ ledger.cert }}",
+          "{{ ca_cert }}"
+        ]
+      }{% if not loop.last %},{% endif %}
+
+{% endfor %}
+    },
+    "CONNECTOR_PAIRS": [
+{% for pair in fx_connector_pairs | default([]) %}
+      ["{{ pair[0] }}", "{{ pair[1] }}"],
+      ["{{ pair[1] }}", "{{ pair[0] }}"]{% if not loop.last %},{% endif %}
+
+{% endfor %}
+    ],
+    {{ host_map(fx_connector_info.map_hosts) }}
+  }
+{% endif %}
+}

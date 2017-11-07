@@ -1,0 +1,16 @@
+---
+
+- src:     https://github.com/ColOfAbRiX/role-bind
+  scm:     git
+  version: master
+  name:    bind
+
+- src:     https://github.com/ColOfAbRiX/role-ssl-certs
+  scm:     git
+  version: master
+  name:    ssl-certs
+
+- src:     https://github.com/ColOfAbRiX/role-ripple-solution
+  scm:     git
+  version: master
+  name:    ripple-solution

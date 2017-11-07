@@ -1,0 +1,455 @@
+---
+# defaults file for bind
+
+# Version to install:
+# - Leave empty for latest version, if not already installed;
+# - "latest" to updated to latest version;
+# - "<version>" to install a specific version
+bind_version: ''
+
+#
+# Generic and Short-cut options
+#
+
+bind_user:  named
+bind_group: named
+
+# Running port, for both IPv4 and IPv6
+bind_port: 53
+
+# Recursive resolution resolver-query-timeout
+bind_resolver_query_timeout: 5
+
+# Address where BIND will be running
+bind_listen_ipv4: [ 127.0.0.1 ]
+
+# Round-robin resolution order
+bind_rrset_order: random
+
+# Determines whether recursion should be allowed. Typically, an authoritative
+# name server (= the target use case of this role) should have recursion turned
+# OFF.
+bind_recursion: 'yes'
+
+# List of hosts that are allowed to query this DNS server.
+bind_allow_query: [ localhost ]
+
+# Logging level
+bind_log_severity:  warning
+bind_logfile_path:  /var/log/named/named.log
+bind_logfile_size:  10m
+bind_logfile_count: 3
+
+# DNSSEC
+dnssec_enable:     'yes'
+dnssec_validation: 'yes'
+dnssec_lookaside:  'auto'
+
+# Default SOA information
+bind_default_ttl:             "1W"
+bind_default_email_addr:      "hostmaster"
+bind_default_time_to_refresh: "1D"
+bind_default_time_to_retry:   "1H"
+bind_default_time_to_expire:  "1W"
+bind_default_nx_ttl:          "1D"
+
+# These options will be added to the default ones present on named.conf
+bind_options_additional:  []
+bind_includes_additional: []
+bind_zones_additional:    []
+bind_logging_additional:  []
+
+#
+# named.conf - BIND Configuration File
+# Ref: https://ftp.isc.org/isc/bind9/cur/9.9/doc/arm/Bv9ARM.ch06.html
+#
+
+# BIND acls
+bind_acls: []
+
+
+# Groups statements that control generic or global behaviour and that have scope
+# for all zones and views unless overridden within a zone, views or other
+# clause. Only one "options" statement is created and this variable is its
+# content.
+bind_options:
+ - comment: "Runtime"
+ - { name: pid-file, value: '"{{ bind_run }}/named.pid"' }
+
+ - comment: "Files and Directories"
+ - { name: directory,          value: '"{{ bind_dir }}"' }
+ - { name: dump-file,          value: '"{{ bind_dir }}/data/cache_dump.db"' }
+ - { name: statistics-file,    value: '"{{ bind_dir }}/data/named_stats.txt"' }
+ - { name: memstatistics-file, value: '"{{ bind_dir }}/data/named_mem_stats.txt"' }
+
+ - comment: "Network"
+ - name: listen-on
+   inline:
+    - { name: port, value: "{{ bind_port }}" }
+   block:
+    - list: "{{ bind_listen_ipv4 }}"
+
+ - comment: "Security"
+ - { name: recursion, value: "{{ bind_recursion }}" }
+ - name: allow-query
+   block:
+    - list: "{{ bind_allow_query }}"
+
+ - comment: "DNSSEC"
+ - { name: dnssec-enable,     value: "{{ dnssec_enable }}" }
+ - { name: dnssec-validation, value: "{{ dnssec_validation }}" }
+ - { name: dnssec-lookaside,  value: "{{ dnssec_lookaside }}" }
+
+ - comment: "Keys"
+ - { name: session-keyfile,        value: '"{{ bind_run }}/session.key"' }
+ - { name: managed-keys-directory, value: '"{{ bind_dir }}/dynamic"' }
+ - { name: bindkeys-file,          value: '"/etc/named.iscdlv.key"' }
+
+
+# Configures the location, level and type of logging that BIND performs. Unless
+# you are using syslog you need a logging statement for BIND. Only one "options"
+# statement is created and this variable is its content.
+bind_logging:
+ - comment: "File Channel"
+ - name: channel
+   value: default_file
+   block:
+    - name: file
+      value: '"{{ bind_logfile_path }}"'
+      inline:
+       - { name: versions, value: "{{ bind_logfile_count }}" }
+       - { name: size,     value: "{{ bind_logfile_size }}" }
+    - { name: severity,       value: "{{ bind_log_severity }}" }
+    - { name: print-severity, value: 'yes' }
+    - { name: print-category, value: 'yes' }
+    - { name: print-time,     value: 'yes'  }
+
+ - comment: "Default logging"
+ - name: category
+   value: default
+   block:
+    - value: default_file
+
+# Allows inclusion of external files into named.conf for administrative
+# convenience or security reasons.
+bind_includes:
+ - comment: "RFC1912 Standard Zones"
+ - name: include
+   value: '"/etc/named.rfc1912.zones"'
+
+ - comment: "Root servers keys"
+ - name: include
+   value: '"/etc/named.root.key"'
+
+
+# Defines the specific zones that your name server will support. In addition
+# there are a number of special zones that you may need to include. May be
+# nested in a view clause.
+bind_zones:
+ - comment: "Default zone resolution"
+ - name: zone
+   value: '"."'
+   options: ['IN']
+   block:
+    - { name: type, value: hint }
+    - { name: file, value: '"named.ca"' }
+
+
+# Defines a list of one or more masters that may be referenced from a masters
+# statement in a zone clause of type slave or an also-notify statement in a zone
+# clause of type master.
+bind_masters: []
+
+
+# Defines the properties or behaviour this server will use when accessing or
+# responding to a defined remote server. May be nested in a view clause.
+bind_server: []
+
+
+# Controls BIND functionality and behaviour based on the host address(es).
+bind_view: []
+
+
+# Declares communication channels to be used by system administrators to get
+# access to statistics information of the name server.
+bind_statistics_channels: []
+
+
+# Describes and controls access to the control channel used by the remote
+# administrator when using the rndc utility.
+bind_controls: []
+
+
+#
+# Authoritative Zone Definitions
+#
+
+bind_zones_master: []
+# # Generically this is a normal owner or label field. I is the 'root name' or
+# # the apex of the zone. Most commonly written as @ (which substitutes the
+# # $ORIGIN) but can be the explicit base Domain Name in FQDN format (which is
+# # the same as the $ORIGIN or its synthesized version) as shown above.
+# - name: example.com
+#
+#   # Defined if to include a global $TTL directive at the beginning of the file
+#   global_ttl: yes
+#
+#   # Defined if to include a global $ORIGIN directive at the beginning of the
+#   # file
+#   global_origin: yes
+#
+#   # Status of the zone. Possible values: present, absent. Other values will be
+#   # ignored.
+#   state: present
+#
+#   # This configuration will be added to the statement relative to this zone on
+#   # the main named.conf file. It uses the same format as "bind_options".
+#   configuration:
+#    - name:  allow-transfer
+#      block: [{ list: [any] }]
+#
+#   # Standard TTL values apply (range 0 to 2147483647 clarified by RFC 2181). A
+#   # Slave DNS does not use this TTL value but various parameters defined within
+#   # the SOA RR
+#   zone_ttl: 1W
+#
+#   # A list of name servers that will respond authoritatively for the domain.
+#   # The first server will be what is called the Primary Master in the context
+#   # of Dynamic DNS (DDNS). If DDNS is not used this may be any suitable name
+#   # server either within the zone file (in- zone) or in an external or foreign
+#   # zone (also called out-of-zone or even out-of-bailiwick by those of a more
+#   # literary bent or with a taste for the exotic). To mimimise confusion this
+#   # is most commonly written as a Fully- qualified Domain Name (FQDN - ends
+#   # with a dot). If the record points to an EXTERNAL server (not defined in
+#   # this zone) it MUST be a FQDN and end with a '.' (dot), for example,
+#   # ns1.example.net. If the name server is within this domain (in this zone
+#   # file) it can be written as ns1 (without the dot) which will be expanded to
+#   # include the $ORIGIN. In the jargon this field is called MNAME field which
+#   # is why we called it name-server. Required fields: name, address.
+#   name_servers:
+#      # An A record will be added using this "address". If the server also
+#      # manages the reverse lookup zone, then also a PTR record will be added
+#    - name:    "ns1"
+#      address: "192.168.1.10"
+#    - name:    "ns2"
+#      address: "192.168.1.11"
+#
+#   # Standard TTL values apply (range 0 to 2147483647 clarified by RFC 2181). A
+#   # Slave DNS does not use this TTL value but various parameters defined within
+#   # the SOA RR
+#   #ttl: 1W
+#
+#   # Email address of the person responsible for this zone and to which email
+#   # may be sent to report errors or problems. In the jargon this is called the
+#   # RNAME field which is why we called it email-addr. The email address of a
+#   # suitable DNS admin but more commonly the technical contact for the domain.
+#   # By convention (in RFC 2142) it is suggested that the reserved mailbox
+#   # hostmaster be used for this purpose but any sensible and stable email
+#   # address will work. NOTE: Format is mailbox-name.domain.com, for example,
+#   # hostmaster.example.com (uses a dot not the more normal @ sign, since @ has
+#   # other uses in the zone file) but mail is sent to hostmaster@example.com.
+#   # Most commonly ending with a '.' (dot) but if the email address lies within
+#   # this domain you can just use hostmaster (see also example below).
+#   email_add: hostmaster
+#
+#   # Signed 32 bit time value in seconds. Indicates the time when the slave will
+#   # try to refresh the zone from the master (by reading the master DNS SOA RR).
+#   # RFC 1912 recommends 1200 to 43200 seconds, low (1200) if the data is
+#   # volatile or 43200 (12 hours) if it's not. If you are using NOTIFY you can
+#   # set it to much higher values, for instance, 1 or more days (> 86400
+#   # seconds).
+#   time_to_refresh: 1D
+#
+#   # Signed 32 bit value in seconds. Defines the time between retries if the
+#   # slave (secondary) fails to contact the master when refresh (above) has
+#   # expired or a NOTIFY message is received. Typical values would be 180 (3
+#   # minutes) to 900 (15 minutes) or higher.
+#   time_to_retry: 1H
+#
+#   # Signed 32 bit value in seconds. Indicates when the zone data is no longer
+#   # authoritative. Used by Slave (Secondary) servers only. BIND9 slaves stop
+#   # responding authoritatively to queries for the zone when this time has
+#   # expired and no contact has been made with the master. Thus, every time the
+#   # refresh values expires (or a NOTIFY message is received) the slave will
+#   # attempt to read the SOA record from the zone master - and initiate a zone
+#   # transfer AXFR/IXFR if sn is HIGHER. If contact is made the expiry and
+#   # refresh values are reset and the cycle starts again. If the slave fails to
+#   # contact the master it will retry every retry period but continue to respond
+#   # authoritatively for the zone until the expiry value is reached at which
+#   # point it will stop answering authoritatively for the domain. RFC 1912
+#   # recommends 1209600 to 2419200 seconds (2-4 weeks) to allow for major
+#   # outages of the zone master.
+#   time_to_expire: 1W
+#
+#   # Signed 32 bit value in seconds. RFC 2308 (implemented by BIND 9) redefined
+#   # this value to be the negative caching time - the time a NAME ERROR =
+#   # NXDOMAIN result may be cached by any resolver. The maximum value allowed by
+#   # RFC 2308 for this parameter is 3 hours (10800 seconds). Note: This value
+#   # was historically (in BIND 4 and 8) used to hold the default TTL value for
+#   # any RR from the zone that did not specify an explicit TTL. RFC 2308 (and
+#   # BIND 9) uses the $TTL directive as the zone default TTL. You may find older
+#   # documentation or zone file configurations which reflect the old usage.
+#   nx_ttl: 1D
+#
+#   # The SOA defines the global parameters for the zone (domain). Only one SOA
+#   # resource record (RR) is allowed in a zone file and it must be the first RR
+#   # in the zone.
+#   rrecord_soa:
+#     name_server: "example.com"
+#     email_addr: "admin@example.com"
+#     time_to_refresh: 1D
+#     time_to_retry: 1H
+#     time_to_expire: 1W
+#     nx_ttl: 1D
+#
+#   # Name Server Records (NS). Defines the authoritative name server(s) for the
+#   # domain (defined by the SOA record) or the subdomain. Required fields:
+#   # name, target. Optional fields: ttl
+#   rrecords_ns:
+#    - name:  "external.com."
+#      target: "ns1.external.com."
+#    - name:  "external.com."
+#      target: "ns2.external.com."
+#
+#   # Mail Exchanger. A preference value and the host name for a mail
+#   # server/exchanger that will service this zone. RFC 974 defines valid names.
+#   # Required fields: preference, name. Optional fields: owner/address, ttl. If
+#   # the optional field owner is not defined, then the field address must.
+#   rrecords_mx:
+#    - preference: 10
+#      name: mail1
+#      address: "192.168.1.20"
+#    - preference: 20
+#      name: mail2
+#      address: "192.168.1.29"
+#      # Name on an external zone, no address required
+#    - owner: extmail
+#      preference: 30
+#      name: "mail.external.com."
+#
+#
+#   # IPv4 Address record. An IPv4 address for a host. If the address specified
+#   # in one of the items of the list is also present in one of the networks for
+#   # which this server is master (see bind_zones_master_reverse) then an
+#   # additional PTR record will be created for the entry in the reverse lookup
+#   # zone file. Required fields: name, address. Optional fields: ttl,
+#   # disable_ptr
+#   rrecords_a:
+#    - name:    mysql
+#      # If the server also manages the reverse lookup zone, then also a PTR
+#      # record will be added
+#      address: "192.168.1.84"
+#    - name:    graphite
+#      address: "192.168.1.32"
+#    - name:    rabbitmq
+#      ttl:     1H
+#      address: "192.168.2.5"
+#
+#   # Canonical Name. An alias name for a host. Causes redirection for a single
+#   # RR at the owner-name. Required fields: name, canonical_name. Optional
+#   # fields: ttl
+#   rrecords_cname:
+#    - name:           www
+#      ttl:            1H
+#      canonical_name: myserver
+#    - name:           www2
+#      ttl:            1H
+#      canonical_name: myserver
+#    - name:           db
+#      ttl:            1H
+#      canonical_name: myserver
+#
+#   # Text information associated with a name. The SPF record should be defined
+#   # using a TXT record and may (as of April 2006) be defined using an SPF RR.
+#   # DKIM (RFC 4871 also makes use of the TXT RR for authenticaing email.
+#   # Related: How to define DKIM/ADSP RRs. Required fields: name, text. Optional
+#   # fields: ttl
+#   rrecords_txt:
+#    - name: "@"
+#      text: "v=spf1 mx:example.net -all"
+#
+#   # Defines services available in the zone, for example, ldap, http, sip etc..
+#   # Allows for discovery of domain servers providing specific services.
+#   rrecords_srv:
+#    - service:  http
+#      protocol: tcp
+#      target:   www
+#      port:     80
+#    - service:  http
+#      protocol: tcp
+#      target:   www2
+#      priority: 10
+#      port:     80
+#    - service:  pop3
+#      protocol: tcp
+#      target:   extmail.external.com.
+#      port:     110
+#      owner:    external.com.
+
+
+bind_zones_master_reverse: []
+# # Network addresses for which this server is master and it reflects the
+# # reverse map domain. The generic option of the "bind_zones_master" structure
+# # above can also be used here, except that only "rrecords_ptr" is allowed.
+# - network: "192.168.1"
+#
+#   # Status of the zone. Possible values: present, absent. Other values will be
+#   # ignored.
+#   state: present
+#
+#   # Defined if to include a global $TTL directive at the beginning of the file
+#   global_ttl: yes
+#
+#   # Defined if to include a global $ORIGIN directive at the beginning of the
+#   # file
+#   global_origin: yes
+#
+#   # This configuration will be added to the statement relative to this zone on
+#   # the main named.conf file. It uses the same format as "bind_options".
+#   configuration:
+#    - name:  allow-transfer
+#      block: [{ list: [any] }]
+#
+#   # This configuration is used to reference an existing forward zone so that
+#   # the reverse lookup will use the same nameservers and domain name. It is a
+#   # convinience as other values can be specified on each entry of this
+#   # structure.
+#   use_forward_zone: example.com
+#
+#   # Used to fill the names that are not FQDN. It takes precedence over the name
+#   # found using "use_forward_zone"
+#   #default_domain: example.com
+#
+#   # A list of name servers that will respond authoritatively for the domain.
+#   # The first server will be what is called the Primary Master in the context
+#   # of Dynamic DNS (DDNS). If DDNS is not used this may be any suitable name
+#   # server either within the zone file (in- zone) or in an external or foreign
+#   # zone (also called out-of-zone or even out-of-bailiwick by those of a more
+#   # literary bent or with a taste for the exotic). To mimimise confusion this
+#   # is most commonly written as a Fully- qualified Domain Name (FQDN - ends
+#   # with a dot). If the record points to an EXTERNAL server (not defined in
+#   # this zone) it MUST be a FQDN and end with a '.' (dot), for example,
+#   # ns1.example.net. If the name server is within this domain (in this zone
+#   # file) it can be written as ns1 (without the dot) which will be expanded to
+#   # include the $ORIGIN. In the jargon this field is called MNAME field which
+#   # is why we called it name-server. An A record will be added for each of
+#   # these entries. Required fields: name. Optional field: domain.
+#   name_servers:
+#      # FQDN, it will be used as it is
+#    - name:   "ns1.example.com."
+#      # If not a FQDN, the domain part will be discovered using "default_domain"
+#      # or the information found with  "use_forward_zone" and if not present it
+#      # will be terminated with a "."
+#    - name:   "ns2"
+#
+#   # Pointer records are the opposite of A and AAAA RRs and are used in Reverse
+#   # Map zone files to map an IP address (IPv4 or IPv6) to a host name. If an A
+#   # record has been defined in any other "bind_zones_master" entry and this
+#   # reverse zone covers the address of that A record, then the a PTR record
+#   # will be added automatically.
+#   rrecords_ptr:
+#    - name:   "250"
+#      target: elasticsearch.example.com.
+#    - name:   "111"
+#      ttl:    1H
+#      target: oracle
