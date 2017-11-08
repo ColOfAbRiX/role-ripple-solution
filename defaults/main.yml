@@ -61,7 +61,8 @@ ripple_solution_db_monitor_pass: Passw0rd
 #
 
 # Prefix for certificate names. Full certificates names will be in the form of
-# "<prefix>.crt" and the keys will be "<prefix>.key"
+# "<prefix>.crt" and the keys will be "<prefix>.key".
+# The role will create the root CA, if missing, and any other missing certificate
 ripple_solution_ca_prefix: "{{ ansible_hostname }}-ca"
 ripple_solution_admin_crt_prefix: "{{ ansible_hostname }}-admin"
 ripple_connect_crt_prefix: "{{ ansible_hostname }}-ripple-connect"
@@ -74,20 +75,25 @@ ripple_solution_repo_cert_files: []
 # - "{{ ssl_certificates_base }}/ripple_solution/ripple-private.client.crt"
 # - "{{ ssl_certificates_base }}/ripple_solution/ripple-private.client.crt"
 
-# Certificates used by Ripple. If they match the *_crt_prefix files, those file
-# will not be created. So this can be used to specify custom certificats for the
-# Ripple instance
+# Certificates used by Ripple. These certificates will be copied in the
+# certificates directory of Ripple.
+# These certificates have precedence over the creation of new certificates. This
+# means that if one of them matches the name specified in one *_crt_prefix
+# variable, that certificate will not be created. This behaviour can be used to
+# specify custom certificates for the Ripple instance.
 ripple_solution_use_certs: []
 # - "{{ ssl_certificates_base }}/ca/ripple_solution_ca.crt"
 
-# Keys used by Ripple. If they match the *_crt_prefix files, those file will not
-# be created. So this can be used to specify custom certificats for the Ripple
-# instance
+# Keys used by Ripple. These keys will be copied in the keys directory of Ripple.
+# These keys have precedence over the creation of new keys. This means that if
+# one of them matches the name specified in one *_crt_prefix variable, that
+# key will not be created. This behaviour can be used to specify custom keys for
+# the Ripple instance.
 ripple_solution_use_keys: []
 # - "{{ ssl_certificates_base }}/ca/ripple_solution_ca.key"
 
 # Certificates of remote parties used by Ripple. These certificates will be
-# copied under the certificates directory of Ripple.
+# copied in the remote certificates directory of Ripple.
 ripple_solution_use_remote_certs: []
 # - "{{ ssl_certificates_base }}/ca/ripple_solution_ca.crt"
 
@@ -100,6 +106,9 @@ ripple_solution_use_remote_certs: []
 ripple_connect_enabled: false
 ripple_connect_port:    5000
 ripple_connect_host:    "{{ ansible_fqdn }}"
+# This is used to make the role aware of the members of the Ripple Connect cluster
+# and to execute actions only once per cluster (on the first node of the cluster).
+# This variable must have the same value across all the members.
 ripple_connect_cluster_members: ["{{ ansible_hostname }}"]
 
 # Database setup
@@ -142,6 +151,9 @@ ripple_connect_ilp_validators: []
 # Ledgers managed by Ripple Connect. Don't include here local Ledgers that use
 # the setting "install_local=yes".
 ripple_connect_ledgers: []
+# - currency: EUR
+#   address:  eur.provider.example.com
+#   account:  https://provider.example.com:6000/account/transact
 
 # Pairing of connector-validators known by this Rippple Connect
 ripple_connect_connector_validator_pairs: []
@@ -253,8 +265,11 @@ ripple_connect_config: {}
 # ILP Ledgers
 #
 
-# List of ILP Ledgers on the machine
+# This is used to make the role aware of the members of the Ledger cluster and
+# to execute actions only once per cluster (on the first node of the cluster).
+# This variable must have the same value across all the members.
 ilp_ledgers_cluster_members: ["{{ ansible_hostname }}"]
+# List of ILP Ledgers on the machine
 ilp_ledgers: []
 #   # Service
 # - name: ledger_eur
@@ -321,6 +336,9 @@ ilp_ledgers: []
 fx_connector_enabled: no
 fx_connector_port: 3000
 fx_connector_host: "{{ ansible_fqdn }}"
+# This is used to make the role aware of the members of FX Connector cluster
+# and to execute actions only once per cluster (on the first node of the cluster).
+# This variable must have the same value across all the members.
 fx_connector_cluster_members: ["{{ ansible_hostname }}"]
 
 # Database
@@ -391,6 +409,9 @@ fx_connector_config: {}
 ilp_validator_enabled: no
 ilp_validator_port: 4000
 ilp_validator_host: "{{ ansible_fqdn }}"
+# This is used to make the role aware of the members of ILP Validator cluster
+# and to execute actions only once per cluster (on the first node of the cluster).
+# This variable must have the same value across all the members.
 ilp_validator_cluster_members: ["{{ ansible_hostname }}"]
 
 # Database

@@ -26,11 +26,27 @@
     sslclientkey:  /var/lib/yum/ripple-private.client.key
     sslverify:     yes
 
+- name: "Allow Obsolete Packages"
+  lineinfile:
+    dest:   "/etc/yum.conf"
+    line:   "obsoletes=0"
+    regexp: '^\s*obsoletes.*'
+    state:  present
+  ignore_errors: yes
+
 - name: "Install Packages"
   yum:
     update_cache: yes
     name:  "ripple-solution{% if ripple_solution_version not in ['', 'latest'] %}-{{ ripple_solution_version }}{% endif %}"
     state: "{% if ripple_solution_version != 'latest' %}present{% else %}latest{% endif %}"
+
+- name: "Revert Obsolete Setting"
+  lineinfile:
+    dest:   "/etc/yum.conf"
+    line:   "obsoletes=1"
+    regexp: '^\s*obsoletes.*'
+    state:  present
+  ignore_errors: yes
 
 - name: "Copy Custom Scripts"
   copy:

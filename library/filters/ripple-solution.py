@@ -6,6 +6,7 @@
 
 import six
 import json
+
 from urlparse import urlparse
 from distutils.util import strtobool
 from ansible.module_utils.six.moves.urllib.parse import urlsplit
@@ -274,6 +275,39 @@ def list_clear_ilp_passwords(key, ilpv_info, ilpv_ed25519, fxc_info, fxc_hmac, l
 
     return output
 
+
+def ripple_connect_ledgers(local_ledgers, rc_ledger_user, remote_ledgers):
+    """
+    Incorporates together local and remote ledgers so that they always fall in
+    the same currency on the configuration file.
+    """
+    def add_entry(result, currency, address, account):
+        entry = {'address': address, 'account': account}
+        currency = currency.upper()
+
+        if currency not in ledgers:
+            result.update({currency: [entry]})
+        else:
+            result[currency].append(entry)
+
+    ledgers = {}
+
+    # Add local ledgers
+    for ledger in local_ledgers:
+        if not ledger['enabled'] or not ledger.get('install_local', False):
+            continue
+        currency = ledger['currency']
+        address = "%s.%s" % (currency.lower(), ledger['host'])
+        account = "%s/account/%s" % (ledger['url'], rc_ledger_user)
+        add_entry(ledgers, currency, address, account)
+
+    # Add remote ledgers
+    for ledger in remote_ledgers:
+        add_entry(ledgers, ledger['currency'], ledger['url'], ledger['account'])
+
+    return ledgers
+
+
 def split_url(value, query='', alias='urlsplit'):
     """
     This same function will be available from Ansible 2.4 with this same interface.
@@ -320,6 +354,7 @@ class FilterModule(object):
             'list_clear_rc_passwords': list_clear_rc_passwords,
             'list_encrypted_ilp_passwords': list_encrypted_ilp_passwords,
             'list_clear_ilp_passwords': list_clear_ilp_passwords,
+            'ripple_connect_ledgers': ripple_connect_ledgers,
             'reduce_or': reduce_or,
             'urlsplit': split_url
         }

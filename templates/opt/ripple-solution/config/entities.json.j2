@@ -39,18 +39,18 @@
     ],
 
     "ledgers": {
-{% for ledger in ilp_ledgers_info if ledger.enabled and ledger.install_local | default(False) | bool %}
-      "{{ ledger.currency | upper }}": [{
-        "address": "{{ ledger.currency | lower }}.{{ ledger.host }}",
-        "account": "http{% if ledger.config.use_https | default(True) | bool %}s{% endif %}://{{ ledger.host }}{% if ledger.port not in [80, 443] %}:{{ ledger.port }}{% endif %}/account/{{ ripple_connect_ledger_user }}"
-      }]{% if not loop.last or ripple_connect_ledgers | default([]) %},{% endif %}
+{% set rc_ledgers = ilp_ledgers_info | ripple_connect_ledgers(ripple_connect_ledger_user, ripple_connect_ledgers | default([])) %}
+{% for currency, ledgers in rc_ledgers.iteritems() %}
+{% set outer_loop = loop %}
+      "{{ currency | upper }}": [
+{% for ledger in ledgers %}
+        {
+          "address": "{{ ledger.address }}",
+          "account": "{{ ledger.account }}"
+        }{% if not loop.last %},{% endif %}
 
 {% endfor %}
-{% for ledger in ripple_connect_ledgers | default([]) %}
-      "{{ ledger.currency | upper }}": [{
-        "address": "{{ ledger.address }}",
-        "account": "{{ ledger.account }}"
-      }]{% if not loop.last %},{% endif %}
+      ]{% if not outer_loop.last %},{% endif %}
 
 {% endfor %}
     },
