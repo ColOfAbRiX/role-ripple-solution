@@ -1,0 +1,67 @@
+{% macro accounts_count(ledgers) -%}
+{# Counts the number of remote accounts configured on the ledgers #}
+{% if ledgers | length == 0 %}0{% else %}{{ ledgers[0].accounts | length + (accounts_count(ledgers[1:]) | int) }}{% endif %}
+{%- endmacro %}
+#!/bin/bash
+#
+# Initializes quotes on providers and fundings on consumers with dummy values
+# for testing purposes.
+#
+
+{% if fx_connector_pairs | length > 0 %}
+#
+# Add initial quote on the provider
+#
+
+{% for pair in fx_connector_pairs %}
+{% set from_currency = pair[0] | regex_search('^([^@]+)') %}
+{% set to_currency = pair[1] | regex_search('^([^@]+)') %}
+# {{ from_currency }}->{{ to_currency }}
+echo "Initial quote for {{ from_currency }}->{{ to_currency }}"
+quote="1.00"
+if [[ "{{ from_currency}}" != "{{ to_currency }}" ]] ; then
+    quote="$(python -c 'import random; print("{0:.2f}".format(random.uniform(1.9, 0.1)))')"
+fi
+sudo /opt/ripple-solution/scripts/rs_requests.sh --method PUT \
+    --ca "{{ ca_cert }}" \
+    --cert "{{ admin_cert }}" \
+    --key "{{ admin_key }}" \
+    "{{ fx_connector_info.url }}/rate/{{ from_currency }}/{{ to_currency }}/$quote?type=buy"
+echo ""
+
+{% endfor %}
+{% endif %}
+{% if accounts_count(ilp_ledgers) != "0" %}
+fundings_amount=100000
+
+# Read consumer credentials
+echo "Input the consumer credentials:"
+read -p "  Operator username: " operator_username
+read -p "  Operator password: " -s operator_password
+echo -e "\n"
+
+#
+# Fund the remote accounts on the consumer
+#
+credentials=$(echo -n "$operator_username:$operator_password" | openssl enc -base64)
+response=$(curl --connect-timeout 5 -skX POST "{{ ripple_connect_info.url }}/v3/oauth/token" -H "Authorization: Basic $credentials" -H 'Content-Type: application/json' --data-binary '{"grant_type":"client_credentials"}' 2>&1)
+if [[ $? != 0 ]] ; then
+    echo "Issues with connectivity" && exit 1
+fi
+if [[ -z "$response" || "$response" =~ "Unauthorized" || "$response" =~ "Invalid Credentials" ]] ; then
+    echo "Issues with credentials" && exit 1
+fi
+token="$(sed 's/.*"access_token":"\([^"]*\).*/\1/' <<< "$response")"
+echo -e "Bearer token: $token\n"
+
+{% for ledger in ilp_ledgers_info if ledger.enabled %}
+{% for account in ledger.accounts %}
+# Account {{ account.account }} on {{ ledger.currency }}
+echo "Funding {{ ledger.currency }} on account {{ account.account }}"
+query="{{ ripple_connect_info.url }}/v3/transfers?ledger_uri={{ ledger.url }}&sender_account=transact&receiver_account={{ account.account }}&amount=$fundings_amount"
+response="$(curl -sk -X POST -H "Authorization: Bearer $token" "$query" 2>&1)"
+python -m json.tool <<< "$response" 2>&1
+
+{% endfor %}
+{% endfor %}
+{% endif %}

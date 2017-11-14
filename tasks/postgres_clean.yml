@@ -2,8 +2,8 @@
 # This file resets the databases
 
 - name: "Stop Ripple Solution"
+  delegate_to: "{{ ansible_hostname }}"
   service: name=ripple-solution state=stopped
-  register: stop_ripple_solution
   ignore_errors: yes
 
 - name: "Wait for all Services to Stop - {{ component.description }}"
@@ -12,8 +12,12 @@
     timeout: 10
     host: "{{ component.host_data.host }}"
     port: "{{ component.host_data.port }}"
-  when: "component.enabled and
-        'Could not find the requested service' not in stop_ripple_solution.msg"
+  when: component.enabled | default(False) | bool
+  ignore_errors: yes
+
+- name: "Kill Ripple Solution"
+  delegate_to: "{{ ansible_hostname }}"
+  command: /etc/init.d/ripple-solution kill
 
 - name: "Remove User Privileges - {{ component.description }}"
   postgresql_privs:

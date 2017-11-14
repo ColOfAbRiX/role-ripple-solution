@@ -112,7 +112,7 @@
     ],
     "CONNECTOR_LEDGER_CREDENTIALS": {
 {% for ledger in ilp_ledgers_info | default([]) if ledger.enabled %}
-      "{{ ledger.url }}/account/{{ fx_connector_ledger_user }}": {
+      "{{ ledger.url }}/account/{{ fx_connector_local_ledger_account }}": {
         "authorized_access_fingerprints": [
           "{{ fingerprints.results[ripple_connect_idx | int].stdout }}"
         ],
@@ -125,7 +125,7 @@
 
 {% endfor %}
 {% for ledger in fx_connector_ledgers | default([]) %}
-      "{{ ledger.url }}/account/{{ fx_connector_ledger_user }}": {
+      "{{ ledger.url }}/account/{{ ledger.account_name }}": {
         "authorized_access_fingerprints": [
 {% for f in ledger.fingerprints | default([]) %}
           "{{ f }}"{% if not loop.last %},{% endif %}

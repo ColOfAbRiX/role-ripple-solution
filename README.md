@@ -8,8 +8,7 @@ The role can configure all the Ripple Solution components (Ripple Connect, ILP L
  - it can configure one or more components per machine;
  - it supports scenarios with a load balancer and/or a reverse proxy;
  - it can create a simple set of certificates for the simplest setups;
- - it can encrypt all the necessary data of the configuration files if needed;
- - it is very good at avoid Ripple Solution restarts when not needed.
+ - it can encrypt all the sensitive data of the configuration files if needed.
 
 The role does not:
 
@@ -28,12 +27,12 @@ The role requires RHEL/CentOS 7 to work.
 
 Although not strictly necessary, it is highly recommended to use the role [role-ssl-certs](https://github.com/ColOfAbRiX/role-ssl-certs) to create and manage the SSL certificates in complex scenarios, like with a load balancer and reverse proxy, and the role [role-bind](https://github.com/ColOfAbRiX/role-bind) to create DNS overrides in setups with a reverse proxy.
 
-The role comes with a custom set of Python filters, [ripple-solution.py](library/filters/ripple-solution.py), used by the role to build the BIND configuration.
+The role comes with a custom set of Python filters, [ripple-solution.py](library/filters/ripple-solution.py), used by the role for several configuration steps.
 The python file must be copied in the Ansible home path `${ANSIBLE_HOME}` or inside the library path defined by the variable [filter_plugins](https://docs.ansible.com/ansible/latest/intro_configuration.html#filter-plugins) of the ansible.cfg configuration file. If the file is missing, Ansible will complain throwing a "`no filter named xxx`" error.
 
 ## Role Variables
 
-The roles has an extensive documentation of the variables in the [default configuration](defaults/main.yml) file, including their default values and some examples, and a full set of examples is given in the [examples/](examples) directory.
+The roles has an extensive documentation of the variables in the [default configuration](defaults/main.yml) file, including their default values and some examples. A full set of examples is given in the [examples/](examples) directory.
 
 Just as a quick summary, there are 5 sets of variables used to configure each component:
 
@@ -50,6 +49,8 @@ No dependencies, although using the roles [role-ssl-certs](https://github.com/Co
 ## Examples
 
 ### Example playbook
+
+This example shows how to use the role together with the two other recommended roles [role-ssl-certs](https://github.com/ColOfAbRiX/role-ssl-certs) and [role-bind](https://github.com/ColOfAbRiX/role-bind). Note that when clustering Ripple Solution, the role ssl-certs must be run with `serial: 1`.
 
 ```Yaml
 - hosts: servers
@@ -86,6 +87,12 @@ The [examples/](examples) directory contains the configuration for several scena
     - One liquidity consumer with 2 currencies
     - No reverse proxy
     - No load balancers
+ * Multiple providers
+    - First liquidity provider with 1 currency
+    - Second liquidity provider with 1 currencies
+    - One liquidity consumer with 2 currencies
+    - No reverse proxy
+    - No load balancers
  * Full production example
     - One redundant liquidity provider (2 instances) with 2 currencies
     - One redundant liquidity consumer (2 instances) with 2 currencies
@@ -94,7 +101,7 @@ The [examples/](examples) directory contains the configuration for several scena
 
 The examples are meant to be run on AWS using [Terraform](https://www.terraform.io) to create the instances, but the machines can be created by any other mean as long as they are present and:
 
- - the machine is reachable via SSH using the names present in the inventory;
+ - the machines are reachable via SSH using the names present in the inventory;
  - the user `ansible` is present on the machines;
  - the user `ansible` is able to sudo to `root` without a password.
 
@@ -109,24 +116,24 @@ Each of these high level steps are performed by one YAML file in the [tasks/](ta
 This step is responsible of:
 
  - gathering information for the components from various sources;
- - process (build additional information, filter existing data, present data in a different format) the information depending on their purpose;
+ - process the information (build additional information, filter existing data, present data in a different format) depending on their purpose;
  - build uniform datastructures.
 
 The final datastructures are then accessed using loops or other control structures across the role. This is one of the most important step because it creates the data used by everything else.
 
 ### [Installation](tasks/install.yml)
 
-This step install the Ripple Solution package and performs other system operation like configuring systemd (when present) and log rotation.
+This step install the Ripple Solution package and performs other system operation like configuring systemd (when present), log rotation, installation of custom scripts and more.
 
 ### DB Reset
 
-If requested using the variable `ripple_solution_reset_db`, this task will completely erase all database so that a fresh installation can be performed.
+If requested setting the variable `ripple_solution_reset_db` to `True`, this task will completely erase the data and drop all the database so that a fresh installation can be performed.
 
 The file that is loaded depends on the chosen RDBMS.
 
 ### DB Pre-configuration
 
-This step initializes the database with operations like creating the schemas, the users, assigning permissions, hardening the DB and so on.
+This step initializes the database with operations like creating schemas, users, assigning permissions, hardening the DB and so on.
 
 The file that is loaded depends on the chosen RDBMS.
 
@@ -144,7 +151,7 @@ The file that is loaded depends on the chosen RDBMS.
 
 ### [Certificates](tasks/certificates.yml)
 
-This step is responsible of working with X509 certificates used by Ripple.
+This step is responsible of working with SSL certificates used by Ripple.
 
 The tasks in the file first copy existing certificates and keys from the local Ansible repository to the target machine. When this step is done they'll create the missing items.
 
@@ -160,7 +167,7 @@ This step takes care of the keys used by the various components. It creates the 
 
 This file takes care of encrypting the values that go into the configuration files, but only if necessary.
 
-The Ripple script `encrypt_string.js` creates different outputs every time it's run for the same password and this makes the file `secrets.json` to change. A change in a configuration file prompts Ansible to restart Ripple and this is something we don't want.
+The Ripple script `encrypt_string.js` creates different outputs every time it's run for the same password and this makes the file `secrets.json` to change. A change in a configuration file prompts Ansible to restart Ripple but this is usually not a desired behaviour. The tasks of the step takes care of recognising when a real change of configuration requires an update of the configuration and a restart.
 
 The step also creates the hashes that will go in the `secrets.json` file.
 

@@ -359,7 +359,12 @@ fx_connector_trusted_external_certs: []
 # setting "install_local=yes".
 fx_connector_ledgers: []
 # - url: https://consumer.example.com:6000
+#   # Name of the FX Connector account on the ledger
+#   account_name: connector_consumer
+#   # Certificate to trust
 #   cert: ripple_solution_ca.crt
+#   # Fingerprint of the SSL certificate of Ripple Connect on the provider that
+#   # owns the account on the ledger
 #   fingerprints:
 #    - '8F:14:75:41:85:43:CB:16:70:21:02:B3:28:8A:9A:6E:B6:8C:89:55:E3:28:F1:F4:E3:FA:A4:23:40:23:43:7B'
 
@@ -381,8 +386,8 @@ fx_connector_reverse_proxy_url: ''
 # proxy (if present) is in front of the load balancer.
 fx_connector_load_balancer_url: ''
 
-# Name of the local FX Connector account on the Ledgers
-fx_connector_ledger_user: connector_local
+# Name of the FX Connector account on the local Ledgers
+fx_connector_local_ledger_account: connector_local
 
 # The ILP Validator to associate with this FX Connector. Don't include here
 # local Validators that use the setting "ilp_validator_install_local=yes".

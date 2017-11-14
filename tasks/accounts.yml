@@ -8,7 +8,7 @@
        notifications: "{{ ripple_connect_info.url | default('') }}/ledger/notifications"
        enabled:       "{{ ripple_connect_info.enabled and ripple_connect_install_local | default(False) | bool }}"
        balance:       "-1000000"
-     - account:       "{{ fx_connector_ledger_user }}"
+     - account:       "{{ fx_connector_local_ledger_account }}"
        fingerprint:   "{{ fingerprints.results[fx_connector_idx].stdout | default('') }}"
        notifications: "{{ fx_connector_info.url | default('') }}/notification"
        enabled:       "{{ fx_connector_info.enabled and fx_connector_install_local | default(False) | bool }}"

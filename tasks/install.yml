@@ -32,6 +32,7 @@
     line:   "obsoletes=0"
     regexp: '^\s*obsoletes.*'
     state:  present
+  changed_when: false
   ignore_errors: yes
 
 - name: "Install Packages"
@@ -46,22 +47,38 @@
     line:   "obsoletes=1"
     regexp: '^\s*obsoletes.*'
     state:  present
+  changed_when: false
   ignore_errors: yes
 
-- name: "Copy Custom Scripts"
+- name: "Copy Custom Scripts 1/2"
   copy:
     src:    "{{ item.src }}"
     dest:   "{{ item.dest }}"
     mode:   '0750'
     force:  yes
     owner:  root
-    group:  root
+    group:  "{{ ripple_solution_group }}"
     seuser: system_u
     serole: object_r
     setype: usr_t
   with_items:
    - src:  opt/ripple-solution/scripts/decrypt_string.js
      dest: "{{ ripple_solution_scripts_base }}/decrypt_string.js"
+
+- name: "Copy Custom Scripts 2/2"
+  template:
+    src:    "{{ item.src }}"
+    dest:   "{{ item.dest }}"
+    mode:   '0750'
+    force:  yes
+    owner:  root
+    group:  "{{ ripple_solution_group }}"
+    seuser: system_u
+    serole: object_r
+    setype: usr_t
+  with_items:
+   - src:  opt/ripple-solution/scripts/dummy_init.j2
+     dest: "{{ ripple_solution_scripts_base }}/dummy_init"
 
 - name: "Install Systemd Unit"
   copy:
