@@ -111,7 +111,7 @@ Ripple is a complex system and it is really useful to understand the steps that 
 
 Each of these high level steps are performed by one YAML file in the [tasks/](tasks/) so that it's easier to identify the problem.
 
-### [Data structures](tasks/datastructs.yml)
+### [Data structures](tasks/00-datastructs.yml)
 
 This step is responsible of:
 
@@ -121,7 +121,11 @@ This step is responsible of:
 
 The final datastructures are then accessed using loops or other control structures across the role. This is one of the most important step because it creates the data used by everything else.
 
-### [Installation](tasks/install.yml)
+### [Sanity checks](tasks/01-checks.yml)
+
+This step checks that all the required information is available before the role starts actioning the tasks and it provide an early fail for errors.
+
+### [Installation](tasks/02-install.yml)
 
 This step install the Ripple Solution package and performs other system operation like configuring systemd (when present), log rotation, installation of custom scripts and more.
 
@@ -137,7 +141,7 @@ This step initializes the database with operations like creating schemas, users,
 
 The file that is loaded depends on the chosen RDBMS.
 
-### [Schema installation](tasks/database.yml)
+### [Schema installation](tasks/05-databases.yml)
 
 This step initializes the actual database content using the SQL files provided with the Ripple package itself.
 
@@ -149,7 +153,7 @@ Similar to the pre-configuration step, this step performs post installation step
 
 The file that is loaded depends on the chosen RDBMS.
 
-### [Certificates](tasks/certificates.yml)
+### [Certificates](tasks/07-certificates.yml)
 
 This step is responsible of working with SSL certificates used by Ripple.
 
@@ -159,11 +163,11 @@ The role will always create certificates using a Root CA.
 
 When creating new certificates, the step will first create a Root CA and then it will use the latter to create all the other certificates. If the Root CA is missing but the other certificates are present, the role will discard them and create new ones with the Root CA it just generated.
 
-### [Keys](tasks/keys.yml)
+### [Keys](tasks/08-keys.yml)
 
 This step takes care of the keys used by the various components. It creates the missing keys or it can use the keys provided with variables.
 
-### [Encryption and Hashing](tasks/encryption.yml)
+### [Encryption and Hashing](tasks/09-encryption.yml)
 
 This file takes care of encrypting the values that go into the configuration files, but only if necessary.
 
@@ -171,15 +175,15 @@ The Ripple script `encrypt_string.js` creates different outputs every time it's 
 
 The step also creates the hashes that will go in the `secrets.json` file.
 
-### [Configuration](tasks/config.yml)
+### [Configuration](tasks/10-config.yml)
 
 The configuration files used by Ripple are created in this step, putting together and in a JSON format the information available in Ansible.
 
-### [Initialisation](tasks/init.yml)
+### [Initialisation](tasks/11-init.yml)
 
 This step has the important task of making sure the all the Ripple Solution services are up and running and to restart them only when necessary.
 
-### [Ledger Accounts](tasks/accounts.yml)
+### [Ledger Accounts](tasks/12-accounts.yml)
 
 The last step creates the accounts on the ledgers configured on the system.
 

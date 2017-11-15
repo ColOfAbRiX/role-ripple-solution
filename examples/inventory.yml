@@ -44,7 +44,7 @@ all:
 
     #
     # Example04 - Partner connectivity
-    #  - One conumer with 2 currencies
+    #  - One consumer with 2 currencies
     #  - One provider with 2 currencies
     #  - No load balancers
     #  - No reverse proxy
@@ -55,7 +55,7 @@ all:
 
     #
     # Example05 - Full production example
-    #  - One redundant conumer (2 instances) with 2 currencies
+    #  - One redundant consumer (2 instances) with 2 currencies
     #  - One redundant provider (2 instances) with 2 currencies
     #  - One load balancer per component
     #  - One reverse proxy per component for public access

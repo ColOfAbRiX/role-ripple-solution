@@ -77,8 +77,8 @@
     serole: object_r
     setype: usr_t
   with_items:
-   - src:  opt/ripple-solution/scripts/dummy_init.j2
-     dest: "{{ ripple_solution_scripts_base }}/dummy_init"
+   - src:  opt/ripple-solution/scripts/quotes-funds-init.j2
+     dest: "{{ ripple_solution_scripts_base }}/quotes-funds-init"
 
 - name: "Install Systemd Unit"
   copy:

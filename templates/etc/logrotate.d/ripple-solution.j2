@@ -1,8 +1,9 @@
 /var/log/ripple-solution/*out.log
 /var/log/ripple-solution/*err.log
 /var/log/ripple-solution.log {
-    rotate 90
-    daily
+    weekly
+    rotate 13
+    maxsize 250M
     compress
     missingok
     notifempty

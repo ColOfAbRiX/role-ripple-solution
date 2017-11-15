@@ -12,6 +12,11 @@
 #
 # Add initial quote on the provider
 #
+read -p "You are about to add random initial quotes on {{ fx_connector_pairs | length }} currency pairs. Do you wish to continue? [y/N]: " answer
+if [[ "$answer" != 'y' ]] ; then
+    echo "Aborting."
+    exit 0
+fi
 
 {% for pair in fx_connector_pairs %}
 {% set from_currency = pair[0] | regex_search('^([^@]+)') %}
@@ -32,17 +37,29 @@ echo ""
 {% endfor %}
 {% endif %}
 {% if accounts_count(ilp_ledgers) != "0" %}
-fundings_amount=100000
+#
+# Fund the remote accounts on the consumer
+#
 
 # Read consumer credentials
+echo -e "Adding funds to the remote connector accounts on the local ledgers\n"
 echo "Input the consumer credentials:"
 read -p "  Operator username: " operator_username
 read -p "  Operator password: " -s operator_password
 echo -e "\n"
+read -p "Fundings amount: " fundings_amount
+echo ""
 
-#
-# Fund the remote accounts on the consumer
-#
+# Conditioning
+if [[ -z "$operator_username" || -z "$operator_password" ]] ; then
+    echo "Username and password are compulsory."
+    exit 1
+fi
+if [[ -z "$fundings_amount" ]] ; then
+    fundings_amount=100000
+fi
+
+# Obtaining the authentication token
 credentials=$(echo -n "$operator_username:$operator_password" | openssl enc -base64)
 response=$(curl --connect-timeout 5 -skX POST "{{ ripple_connect_info.url }}/v3/oauth/token" -H "Authorization: Basic $credentials" -H 'Content-Type: application/json' --data-binary '{"grant_type":"client_credentials"}' 2>&1)
 if [[ $? != 0 ]] ; then
@@ -53,6 +70,12 @@ if [[ -z "$response" || "$response" =~ "Unauthorized" || "$response" =~ "Invalid
 fi
 token="$(sed 's/.*"access_token":"\([^"]*\).*/\1/' <<< "$response")"
 echo -e "Bearer token: $token\n"
+
+read -p "You are about to fund $fundings_amount on {{ accounts_count(ilp_ledgers) }} ledgers. Do you wish to continue? [y/N]: " answer
+if [[ "$answer" != 'y' ]] ; then
+    echo "Aborting."
+    exit 0
+fi
 
 {% for ledger in ilp_ledgers_info if ledger.enabled %}
 {% for account in ledger.accounts %}
