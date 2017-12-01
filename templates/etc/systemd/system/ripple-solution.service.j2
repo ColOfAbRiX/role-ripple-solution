@@ -1,3 +1,5 @@
+# {{ ansible_managed }}
+
 [Unit]
 Description=Ripple Solution
 Wants=network.target
@@ -6,6 +8,7 @@ After=network.target
 [Service]
 Type=oneshot
 RemainAfterExit=true
+ExecStartPre={{ ripple_solution_scripts_base }}/db_connectivity.py
 ExecStart=/etc/init.d/ripple-solution start
 ExecStop=/etc/init.d/ripple-solution kill
 StandardOutput=syslog

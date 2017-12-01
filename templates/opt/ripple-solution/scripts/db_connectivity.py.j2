@@ -1,0 +1,59 @@
+#!/usr/bin/env python
+#
+# This script checks the connectivity to the DB and waits for it until a timeout
+# It is used to make Ripple wait until the DB is available at startup
+#
+# {{ ansible_managed }}
+#
+
+from __future__ import print_function
+
+import sys
+import time
+import socket
+
+# Wait max 15 minutes
+max_retries = 90
+wait_time = 7
+timeout = 3
+
+# This variable is filled by Ansible
+databases = [
+{% for item in ripple_solution_info if item.enabled | default(False) %}
+    ("{{ item.db_host }}", {{ item.db_port }}),
+{% endfor %}
+]
+
+def check_connection(addr, port):
+    tries = 0
+    s = socket.socket()
+    while tries < max_retries:
+        print("  Try #%d: " % (tries + 1), end='')
+        try:
+            host = socket.gethostbyname(addr)
+            s = socket.create_connection((addr, port), timeout=timeout)
+            print("Connection successful.")
+            return True
+        except:
+            print("Failed to connect.")
+            time.sleep(wait_time)
+            tries += 1
+        finally:
+            s.close()
+    return False
+
+
+def main():
+    for db_addr, db_port in list(set(databases)):
+        print("Checking %s:%s..." % (db_addr, db_port))
+        if not check_connection(db_addr, db_port):
+            sys.exit(1)
+        print("")
+
+    sys.exit(0)
+
+
+if __name__ == '__main__':
+    main()
+
+# vim: ft=python:ts=4:sw=4
