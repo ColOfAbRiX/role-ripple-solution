@@ -79,7 +79,7 @@ ripple_ssl_sequence:
      signing_key:      "{{ ripple_solution_ca_prefix }}"
      days:             1826
 
- # FX Connector certificate
+ # FX Connector certificates
  - name: "{{ fx_connector_crt_prefix }}"
    key:
      bits:             2048
