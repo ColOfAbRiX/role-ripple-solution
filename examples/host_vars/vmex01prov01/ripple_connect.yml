@@ -1,0 +1,96 @@
+---
+# # # # #  vm ex01 prov01  # # # # #
+
+# NOTE: All passwords are in secrets.yml
+
+#
+# Service
+#
+
+# Details of the configuration of the system service
+ripple_connect_enabled: yes
+ripple_connect_port:    5000
+ripple_connect_host:    "{{ ansible_fqdn }}"
+
+#
+# Database
+#
+
+# Configuration of the connection to the database, the user and the Admin
+ripple_connect_db_host: postgres_hostname
+ripple_connect_db_port: 5432
+ripple_connect_db_user: user_rc
+ripple_connect_db_name: provider_ripple_connect
+ripple_connect_db_admin_user: postgres
+
+#
+# Remote services
+#
+
+ripple_connect_trusted_external_certs:
+ - the_consumer.com-root_ca.crt
+ripple_connect_partners:
+ - address:  the_consumer.com:5000
+   username: provider_ripple_connect
+   password: "{{ ripple_connect_client_password }}"
+   partner_users:
+    - username: consumer_ripple_connect
+      password: "{{ ripple_connect_server_password }}"
+ripple_connect_fx_connectors: []
+ripple_connect_ilp_validators: []
+ripple_connect_ledgers:    []
+ripple_connect_connector_validator_pairs: []
+ripple_connect_nostro_accounts:
+ - currency: GBP
+   url: https://the_consumer.com:3000
+
+#
+# Configuration
+#
+
+# Setting this to true will instruct Ansible to take care of configuring all the
+# Ripple Solution components installed on the machine with the configuration of
+# this Ripple Connect
+ripple_connect_install_local: true
+ripple_connect_secrets_encrypted: "false"
+
+# Remaining configuration
+ripple_connect_ledger_user: transact
+ripple_connect_enable_ui: "true"
+ripple_connect_config:
+  use_https: "true"
+  quote_expiration_mins: 720
+  sending_payment_expiration_offset_mins: 2160
+  settlement_payment_expiration_offset_mins: 43200
+  receiving_payment_expiration_offset_mins: 57600
+  log_level: info
+  secrets_file_path: secrets.json
+  settlement_expiry_duration_seconds: 120
+  access_token_expiration_hours: 12
+  access_token_length: 255
+  message_length_max: 255
+  sending_fee_percentage: 1
+  receiving_fee_percentage: 2
+  sending_fee_amount: 0.01
+  receiving_fee_amount: 0.02
+  currency_specific_fees:
+    GBP:
+      sending_fee_amount: 0
+      sending_fee_percentage: 0.5
+  receiver_auto_accept_quote: "false"
+  requested_additional_info:
+    from_sender:
+     - secondary_id
+  api_prefix: ''
+  payment_labels:
+   - compliance_succeeded
+   - compliance_failed
+   - sending_payment_pending
+   - sending_payment_succeeded
+   - sending_payment_failed
+   - sending_postprocess_succeeded
+   - sending_postprocess_pending
+   - receiving_payment_pending
+   - receiving_postprocess_pending
+   - receiving_postprocess_succeeded
+  amount_decimal_scale: 2

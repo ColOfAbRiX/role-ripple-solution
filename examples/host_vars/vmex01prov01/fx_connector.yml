@@ -1,0 +1,70 @@
+---
+# # # # #  vm ex01 prov01  # # # # #
+
+# NOTE: All passwords are in
+
+#
+# Service
+#
+
+# Details of the configuration of the system service
+fx_connector_enabled: yes
+fx_connector_port: 3000
+fx_connector_host: "{{ ansible_fqdn }}"
+
+#
+# Database
+#
+
+# Configuration of the connection to the database, the user and the Admin
+fx_connector_db_host: postgres_hostname
+fx_connector_db_port: 5432
+fx_connector_db_user: user_fxc
+fx_connector_db_name: provider_fx_connector
+fx_connector_db_admin_user: postgres
+
+#
+# Remote services
+#
+
+# The *remote* certificates trusted by the FX connector, in this example the
+# certificate of the only consumer (the_consumer.com). Certificates of the local
+# Ripple services are trusted automatically.
+fx_connector_trusted_external_certs:
+ - the_consumer.com-root_ca.crt
+
+# Known remote ledgers. As above, if the variable "ilp_ledgers[*].install_local"
+# has been set to True, the configuration of the local ledgers will be added
+# automatically.
+fx_connector_ledgers:
+ - url: https://the_consumer.com:6000
+   # Name of the account of this instance of the FX connector on the consumer ledger.
+   # It's recommended to choose a name that represents both the provider hostname and
+   # the connector account
+   account_name: connector_the_consumer.com
+   # Remote ledger certificate to trust
+   cert: the_consumer.com-root_ca.crt
+   # Even if this entry is for the account for the consumer, put here the fingerprint of the SSL
+   # certificate of Ripple Connect on the provider
+   fingerprints:
+    - '66:76:4D:B5:B5:9D:14:79:E3:61:1E:B1:3C:3D:B2:9F:49:67:EE:C2:61:09:4B:24:C9:3D:AB:55:E1:45:80:21'
+
+# Don't put the pair twice, Ansible will create a definition for both directions
+# in the configuration (eg. don't write GBP@provider-EUR@consumer + EUR@consumer-GBP@provider)
+fx_connector_pairs:
+ - [ "GBP@{{ ilp_ledgers_info[0].url }}", 'GBP@https://the_consumer.com:6000' ]
+
+#
+# Configuration
+#
+
+# Setting this to true will instruct Ansible to take care of configuring all the
+# Ripple Solution components installed on the machine with the configuration of
+# this FX Connector
+fx_connector_install_local: true
+
+# Remaining configuration
+fx_connector_config:
+  log_level: info
+  use_https: "true"
+  downtime_tolerance_interval: 5000

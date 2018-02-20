@@ -1,0 +1,8 @@
+---
+# # # # #  vm ex01 prov01  # # # # #
+
+# List of the remote certificates to install on the Ripple Solution directory.
+# They are fetched from the local Ansible repository under:
+#   <inventory_path>/ssl_certificates/ripple_colution/crt/
+ripple_solution_use_remote_certs:
+ - "{{ ssl_certificates_base }}/ripple_solution/crt/the_consumer.com-root_ca.crt"

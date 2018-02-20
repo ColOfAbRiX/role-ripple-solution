@@ -1,0 +1,57 @@
+---
+# # # # #  vm ex01 prov01  # # # # #
+
+# NOTE: All passwords are in secrets.yml
+
+ilp_ledgers:
+
+   #
+   # Service
+   #
+
+   # Details of the configuration of the system service
+ - name: ledger_gbp
+   enabled: yes
+   port: 6002
+   host: "{{ ansible_fqdn }}"
+   crt_prefix: "{{ ledger_crt_prefix }}"
+
+   #
+   # Database
+   #
+
+   # Configuration of the connection to the database, the user and the Admin
+   db_host: postgres_hostname
+   db_port: 5432
+   db_user: user_lgbp
+   db_pass: "{{ ledger_gbp_db_pass }}"
+   db_name: provider_ledger_gbp
+   db_admin_user: postgres
+   db_admin_pass: "{{ ledger_gbp_db_admin_pass }}"
+
+   #
+   # Configuration
+   #
+
+   currency: GBP
+
+   # Setting this to true will instruct Ansible to take care of configuring all the
+   # Ripple Solution components installed on the machine with the configuration of
+   # this Ledger
+   trusted_external_certs:
+    - the_consumer.com-root_ca.crt
+
+   # Accounts to create on the Ledger. None in this example because the accounts
+   # for the local components are created automatically.
+   accounts: []
+
+   # Setting this to true will instruct Ansible to take care of configuring all the
+   # Ripple Solution components installed on the machine with the configuration of
+   # this Ledger
+   install_local: true
+
+   # Remaining configuration
+   config:
+     log_level: info
+     use_https: "true"
+     auth_client_cert_enabled: "true"

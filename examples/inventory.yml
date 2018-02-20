@@ -15,6 +15,8 @@ all:
     #
     # Example01 - Basic configuration
     #  - One provider with one currency
+    #  - All components in a single host
+    #  - One DB instance for all the components
     #  - No reverse proxy
     #  - No load balancers
     #
@@ -25,6 +27,8 @@ all:
     #
     # Example02 - Reverse proxy configuration
     #  - One provider with one currency
+    #  - All components in a single host
+    #  - One DB instance for all the components
     #  - One reverse proxy per component for public access
     #  - No load balancers
     #
@@ -35,6 +39,8 @@ all:
     #
     # Example03 - Load balancer configuration
     #  - One redundant provider (2 instances) with one currency
+    #  - All components in a single host
+    #  - One DB instance for all the components
     #  - One load balancer per component
     #  - No reverse proxy
     #
@@ -46,6 +52,9 @@ all:
     # Example04 - Partner connectivity
     #  - One consumer with 2 currencies
     #  - One provider with 2 currencies
+    #  - All components in a single host
+    #  - One DB instance for all the components
+    #  - Consumer and provider have their own instance and DB
     #  - No load balancers
     #  - No reverse proxy
     #
@@ -57,6 +66,9 @@ all:
     # Example05 - Full production example
     #  - One redundant consumer (2 instances) with 2 currencies
     #  - One redundant provider (2 instances) with 2 currencies
+    #  - All components in a single host
+    #  - One DB instance for all the components
+    #  - Consumer and provider have their own instance and DB
     #  - One load balancer per component
     #  - One reverse proxy per component for public access
     #

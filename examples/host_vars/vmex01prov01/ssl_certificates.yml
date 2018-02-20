@@ -1,0 +1,98 @@
+---
+# # # # #  vm ex01 prov01  # # # # #
+
+ripple_solution_ca_prefix:        "{{ ansible_hostname }}-root_ca"
+ripple_solution_admin_crt_prefix: "{{ ansible_hostname }}-admin"
+ripple_connect_crt_prefix:        "{{ ansible_hostname }}-ripple-connect"
+ledger_crt_prefix:                "{{ ansible_hostname }}-ledger"
+validator_crt_prefix:             "{{ ansible_hostname }}-validator"
+fx_connector_crt_prefix:          "{{ ansible_hostname }}-fx-connector"
+
+#
+# The paths used by ssl-certs are crafted to match the ones needed by Ripple. In
+# this way, the role ssl-certs will copy them exactly where Ripple expects them
+#
+
+ssl_base:
+  path:   "{{ ripple_solution_cert_base }}"
+  owner:  ripple_solution
+  group:  ripple_solution
+  mode:   '0755'
+
+ssl_key_dir:
+  name: key
+  mode: '0550'
+  owner:  ripple_solution
+  group:  ripple_solution
+ssl_csr_dir:
+  name: csr
+  mode: '0550'
+  owner:  ripple_solution
+  group:  ripple_solution
+ssl_crt_dir:
+  name: crt
+  mode: '0755'
+  owner:  ripple_solution
+  group:  ripple_solution
+
+
+#
+# SSL Certificates (for the ssl-certs role)
+#
+
+ripple_ssl_sequence:
+
+ # Root CA
+ - name: "{{ ripple_solution_ca_prefix }}"
+   key:
+     bits:             4096
+   certificate:
+     self_signed:      yes
+     common_name:      Ripple Solution Provider {{ env | upper }} Root CA
+     days:             36524
+     basicConstraints: 'CA:TRUE, pathlen:0'
+
+ # Administration certificate
+ - name: "{{ ripple_solution_admin_crt_prefix }}"
+   key:
+     bits:             2048
+   certificate:
+     common_name:      Ripple Solution Provider Administration Certificate
+     signing_key:      "{{ ripple_solution_ca_prefix }}"
+     days:             1826
+
+ # Ripple Connect certificate
+ - name: "{{ ripple_connect_crt_prefix }}"
+   key:
+     bits:             2048
+   certificate:
+     common_name:      "{{ ansible_fqdn }}"
+     signing_key:      "{{ ripple_solution_ca_prefix }}"
+     days:             1826
+
+ # ILP validator certificate
+ - name: "{{ validator_crt_prefix }}"
+   key:
+     bits:             2048
+   certificate:
+     common_name:      "{{ ansible_fqdn }}"
+     signing_key:      "{{ ripple_solution_ca_prefix }}"
+     days:             1826
+
+ # FX Connector certificate
+ - name: "{{ fx_connector_crt_prefix }}"
+   key:
+     bits:             2048
+   certificate:
+     common_name:      "{{ ansible_fqdn }}"
+     signing_key:      "{{ ripple_solution_ca_prefix }}"
+     days:             1826
+
+ # Ledgers certificate
+ - name: "{{ ledger_crt_prefix }}"
+   key:
+     bits:             2048
+   certificate:
+     common_name:      "{{ ansible_fqdn }}"
+     signing_key:      "{{ ripple_solution_ca_prefix }}"
+     days:             1826

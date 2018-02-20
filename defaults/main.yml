@@ -1,6 +1,7 @@
 ---
 # defaults file for ripple-solution
 
+
 #
 # General Configuration
 #
@@ -24,15 +25,17 @@ ripple_solution_scripts_base: "{{ ripple_solution_base }}/scripts"
 ripple_solution_user:  ripple_solution
 ripple_solution_group: ripple_solution
 
-# Used to reset the instance
+# Used to reset (erase) the DB or the secrets on the machine
 ripple_solution_reset_db: false
 ripple_solution_reset_crypto: false
 
-# If set to true, all passwords will be encrypted
+# If set to true, all passwords and secrets (like keys) will be encrypted in the
+# files.
 ripple_solution_encrypt_secrets: true
 # All passwords are displayed by Ansible because they are in the data structure.
 # Set this to true to disable their display
 ripple_solution_no_log: true
+
 
 #
 # Database
@@ -40,7 +43,8 @@ ripple_solution_no_log: true
 
 ripple_solution_db_dialect: postgres
 
-# Database monitoring
+# User for database monitoring. If enabled, the user is created on the databases
+# of all components
 ripple_solution_db_monitor_enabled: false
 ripple_solution_db_monitor_user: user_monitor
 ripple_solution_db_monitor_pass: Passw0rd
@@ -53,7 +57,7 @@ ripple_solution_db_monitor_pass: Passw0rd
 #
 # NOTES:
 #  - The role can create its own certificate but its setup is quite simple and
-#    not for production setups. It is recommended that you create the SSL
+#    not for production setup. It is recommended that you create the SSL
 #    certificates in a different way and then copy them on the appropriate place
 #    inside the ripple-solution directory structure. Then set the various _prefix
 #    to the certificate names.
@@ -102,16 +106,20 @@ ripple_solution_use_remote_certs: []
 # Ripple Connect
 #
 
-# Service
+# Details of the configuration of the system service
 ripple_connect_enabled: false
 ripple_connect_port:    5000
 ripple_connect_host:    "{{ ansible_fqdn }}"
-# This is used to make the role aware of the members of the Ripple Connect cluster
-# and to execute actions only once per cluster (on the first node of the cluster).
-# This variable must have the same value across all the members.
+
+# When using a redundant setup and clustering, this variable is used to make the
+# Ansible role aware of the members of Ripple Connect cluster. Ansible will then
+# execute some critical actions only once per cluster (on the first node of the
+# cluster). The variable needs to be filled with a list of hostnames or FQDNs
+# of the members of the cluster.
+# NOTE: This variable must have the same value across all the members.
 ripple_connect_cluster_members: ["{{ ansible_hostname }}"]
 
-# Database setup
+# Configuration of the connection to the database, the user and the Admin
 ripple_connect_db_host: ''
 ripple_connect_db_port: 5432
 ripple_connect_db_user: user_rc
@@ -121,13 +129,14 @@ ripple_connect_db_name: ripple_connect
 ripple_connect_db_admin_user: ''
 ripple_connect_db_admin_pass: ''
 
-# Trusted certificates of external services
+# Trusted certificates of external services. Certificates of the local
+# Ripple services, where *_install_local=True, are trusted automatically.
 ripple_connect_trusted_external_certs: []
 # - ripple_solution_ca.crt
 
 # Partners Configuration and their credentials to connect to the local instance
 ripple_connect_partners: []
-#   # Address of Ripple Connect
+#   # Address of Ripple Connect or the partner
 # - address:  partner.example.com:5000
 #   # Credentials used by us to connect to the partner
 #   username: ripple_connect_user
@@ -155,7 +164,7 @@ ripple_connect_ledgers: []
 #   address:  eur.provider.example.com
 #   account:  https://provider.example.com:6000/account/transact
 
-# Pairing of connector-validators known by this Rippple Connect
+# Pairing of connector-validators known by this Ripple Connect
 ripple_connect_connector_validator_pairs: []
 # - connector_url: https://provider.example.com:3000
 #   validator_url: https://provider.example.com:4000
@@ -167,8 +176,9 @@ ripple_connect_nostro_accounts: []
 #   # Address of the FX Connector that owns the account
 #   url: https://consumer.example.com:3000
 
-# If other Ripple Solution components are present on the machine, setting this
-# to true will configure the other components to use this Ripple Connect instance
+# Setting this to true will instruct Ansible to take care of configuring all the
+# Ripple Solution components installed on the machine with the configuration of
+# this Ripple Connect
 ripple_connect_install_local: true
 
 # If present, the URL of the reverse proxy. The role assumes that the reverse
@@ -179,10 +189,12 @@ ripple_connect_reverse_proxy_url: ''
 # proxy (if present) is in front of the load balancer.
 ripple_connect_load_balancer_url: ''
 
-# Secret keys. If any of these value is left blank, a new random key is generated.
-# These values will go in secrets.json (*_atk=Access Token Key).
-# NOTES:
-#  - All these values must be shared across members of the same cluster
+# Secret keys for Ripple Connect. If left empty Ansible will create the keys
+# automatically but manual creation is recommended. Check the Ripple
+# documentation on how to use the script secret_key_generator.js
+# NOTE: All the secret keys must be shared across members of the same cluster
+# and for this reason, when configuring a cluster, the only option is to create
+# the key pair manually.
 ripple_connect_mac_key: ''
 ripple_connect_external_atk: ''
 ripple_connect_client_atk: ''
@@ -265,13 +277,18 @@ ripple_connect_config: {}
 # ILP Ledgers
 #
 
-# This is used to make the role aware of the members of the Ledger cluster and
-# to execute actions only once per cluster (on the first node of the cluster).
-# This variable must have the same value across all the members.
+# When using a redundant setup and clustering, this variable is used to make the
+# Ansible role aware of the members of the Ledgers cluster. Ansible will then
+# execute some critical actions only once per cluster (on the first node of the
+# cluster). The variable needs to be filled with a list of hostnames or FQDNs
+# of the members of the cluster.
+# NOTE: This variable must have the same value across all the members.
+# NOTE: Members of the same Ledgers cluster must be configured with the same
+# ledgers.
 ilp_ledgers_cluster_members: ["{{ ansible_hostname }}"]
 # List of ILP Ledgers on the machine
 ilp_ledgers: []
-#   # Service
+#   # Details of the configuration of the system service
 # - name: ledger_eur
 #   enabled: false
 #   port: 6000
@@ -280,7 +297,7 @@ ilp_ledgers: []
 #   # This is usually the same as "ledger_crt_prefix"
 #   crt_prefix: "{{ ledger_crt_prefix }}"
 #
-#   # Database
+#   # Configuration of the connection to the database, the user and the Admin
 #   db_host: ''
 #   db_port: 5432
 #   db_user: user_leur
@@ -293,16 +310,22 @@ ilp_ledgers: []
 #   # Currency managed by the Ledger
 #   currency: EUR
 #
-#   # If other Ripple Solution components are present on the machine, setting
-#   # this to true will configure the other components to use this Ledger
-#   # instance
+#   # Setting this to true will instruct Ansible to take care of configuring all the
+#   # Ripple Solution components installed on the machine with the configuration of
+#   # this Ledger
 #   install_local: true
 #
-#   # Trusted certificates of external services
+#   # Trusted certificates of external services. Certificates of the local
+#   # Ripple services, where *_install_local=True, are trusted automatically.
 #   trusted_external_certs:
 #    - ripple_solution_ca.crt
 #
-#   # Accounts to create on the Ledger
+#   # Accounts to create on the Ledger. Accounts for local Ripple Solution
+#   # components that are configured with *_install_local=True are created
+#   # automatically.
+#   # NOTE: Ansible checks the account name on the DB to determine if to create
+#   # or to update it. If an account is already present, Ansible will take care
+#   # of updating its data.
 #   accounts:
 #    - account:       connector_customer
 #      # This is the fingerprint of the FX Connector certificate. It is used to
@@ -332,16 +355,20 @@ ilp_ledgers: []
 # FX Connector
 #
 
-# Service
+# Details of the configuration of the system service
 fx_connector_enabled: no
 fx_connector_port: 3000
 fx_connector_host: "{{ ansible_fqdn }}"
-# This is used to make the role aware of the members of FX Connector cluster
-# and to execute actions only once per cluster (on the first node of the cluster).
-# This variable must have the same value across all the members.
+
+# When using a redundant setup and clustering, this variable is used to make the
+# Ansible role aware of the members of FX Connector cluster. Ansible will then
+# execute some critical actions only once per cluster (on the first node of the
+# cluster). The variable needs to be filled with a list of hostnames or FQDNs
+# of the members of the cluster.
+# NOTE: This variable must have the same value across all the members.
 fx_connector_cluster_members: ["{{ ansible_hostname }}"]
 
-# Database
+# Configuration of the connection to the database, the user and the Admin
 fx_connector_db_host: ''
 fx_connector_db_port: 5432
 fx_connector_db_user: user_fxc
@@ -351,31 +378,40 @@ fx_connector_db_name: fx_connector
 fx_connector_db_admin_user: ''
 fx_connector_db_admin_pass: ''
 
-# Trusted certificates of external services
+# Trusted certificates of external services. Certificates of the local
+# Ripple services, where *_install_local=True, are trusted automatically.
 fx_connector_trusted_external_certs: []
 # - ripple_solution_ca.crt
 
-# Ledgers managed by FX Connector. Don't include here local Ledgers that use the
-# setting "install_local=yes".
+# Known remote ledgers managed by this FX Connector. If the local Ledgers are
+# configured with "ilp_ledgers[*].install_local=True, the configuration of the
+# ledgers will be added automatically to this configuration.
 fx_connector_ledgers: []
 # - url: https://consumer.example.com:6000
-#   # Name of the FX Connector account on the ledger
+#   # Name of the account of this instance of the FX connector on the consumer ledger.
+#   # It's recommended to choose a name that represents both the provider hostname and
+#   # the connector account
 #   account_name: connector_consumer
-#   # Certificate to trust
+#   # Remote ledger certificate to trust
 #   cert: ripple_solution_ca.crt
 #   # Fingerprint of the SSL certificate of Ripple Connect on the provider that
-#   # owns the account on the ledger
+#   # owns the account on the ledger. NOTE that even if this entry is for the
+#   # account for the consumer this is the fingerprint of the SSL certificate of
+#   # Ripple Connect on the provider.
 #   fingerprints:
 #    - '8F:14:75:41:85:43:CB:16:70:21:02:B3:28:8A:9A:6E:B6:8C:89:55:E3:28:F1:F4:E3:FA:A4:23:40:23:43:7B'
 
 # Associations between ledgers managed by this FX Connector (if the FX Connector
-# is enabled this list must be filled)
+# is enabled this list must be filled). Don't put the pair twice, Ansible will
+# create a definition for both directions in the configuration (eg. don't use
+# GBP@provider-EUR@consumer + EUR@consumer-GBP@provider)
 fx_connector_pairs: []
 # - -'EUR@https://provider.example.com:6000'
 #   - EUR@https://consumer.example.com:6000'
 
-# If other Ripple Solution components are present on the machine, setting this
-# to true will configure the other components to use this FX Connector instance
+# Setting this to true will instruct Ansible to take care of configuring all the
+# Ripple Solution components installed on the machine with the configuration of
+# this FX Connector
 fx_connector_install_local: true
 
 # If present, the URL of the reverse proxy. The role assumes that the reverse
@@ -386,18 +422,20 @@ fx_connector_reverse_proxy_url: ''
 # proxy (if present) is in front of the load balancer.
 fx_connector_load_balancer_url: ''
 
-# Name of the FX Connector account on the local Ledgers
-fx_connector_local_ledger_account: connector_local
-
 # The ILP Validator to associate with this FX Connector. Don't include here
 # local Validators that use the setting "ilp_validator_install_local=yes".
 fx_connector_use_validator_url: ''
 
-# Existing Quote HMAC key to be installed on the machine. If empty, a new random
-# one will be generated
-# NOTES:
-#  - All these values must be shared across members of the same cluster
+# Quote HMAC key for the FX Connector. If left empty Ansible will create the key
+# automatically but manual creation is recommended. Check the Ripple
+# documentation on how to use the script secret_key_generator.js
+# NOTE: The fx_connector_quote_hmac_key must be shared across members of the same
+# cluster and for this reason, when configuring a cluster, the only option is to
+# create the key manually.
 fx_connector_quote_hmac_key: ''
+
+# Name of the FX Connector account on the local Ledgers
+fx_connector_local_ledger_account: connector_local
 
 # Connector configuration
 fx_connector_config: {}
@@ -410,16 +448,20 @@ fx_connector_config: {}
 # ILP Validator
 #
 
-# Service
+# Details of the configuration of the system service
 ilp_validator_enabled: no
 ilp_validator_port: 4000
 ilp_validator_host: "{{ ansible_fqdn }}"
-# This is used to make the role aware of the members of ILP Validator cluster
-# and to execute actions only once per cluster (on the first node of the cluster).
-# This variable must have the same value across all the members.
+
+# When using a redundant setup and clustering, this variable is used to make the
+# Ansible role aware of the members of ILP Validator cluster. Ansible will then
+# execute some critical actions only once per cluster (on the first node of the
+# cluster). The variable needs to be filled with a list of hostnames or FQDNs
+# of the members of the cluster.
+# NOTE: This variable must have the same value across all the members.
 ilp_validator_cluster_members: ["{{ ansible_hostname }}"]
 
-# Database
+# Configuration of the connection to the database, the user and the Admin
 ilp_validator_db_host: ''
 ilp_validator_db_port: 5432
 ilp_validator_db_user: user_ilpv
@@ -429,12 +471,14 @@ ilp_validator_db_name: ilp_validator
 ilp_validator_db_admin_user: ''
 ilp_validator_db_admin_pass: ''
 
-# Trusted certificates of external services
+# Trusted certificates of external services. Certificates of the local
+# Ripple services, where *_install_local=True, are trusted automatically.
 ilp_validator_trusted_external_certs: []
 # - ripple_solution_ca.crt
 
-# If other Ripple Solution components are present on the machine, setting this
-# to true will configure the other components to use this ILP Validator instance
+# Setting this to true will instruct Ansible to take care of configuring all the
+# Ripple Solution components installed on the machine with the configuration of
+# this ILP Validator
 ilp_validator_install_local: true
 
 # If present, the URL of the reverse proxy. The role assumes that the reverse
@@ -445,10 +489,12 @@ ilp_validator_reverse_proxy_url: ''
 # proxy (if present) is in front of the load balancer.
 ilp_validator_load_balancer_url: ''
 
-# Ed25519 keys for the validator. If not specified they will be created
-# automatically
-# NOTES:
-#  - The ilp_validator_public_key must be shared across members of the same cluster
+# Ed25519 keys for the ILP Validator. If left empty Ansible will create the key
+# pair automatically but manual creation is recommended. Check the Ripple
+# documentation on how to use the script ed25519_key_pair_generator.js
+# NOTE: The ilp_validator_public_key must be shared across members of the same
+# cluster and for this reason, when configuring a cluster, the only option is to
+# create the key pair manually.
 ilp_validator_private_key: ''
 ilp_validator_public_key: ''
 

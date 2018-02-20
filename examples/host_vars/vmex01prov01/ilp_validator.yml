@@ -1,0 +1,52 @@
+---
+# # # # #  vm ex01 prov01  # # # # #
+
+# NOTE: All passwords are in secrets.yml
+
+#
+# Service
+#
+
+# Details of the configuration of the system service
+ilp_validator_enabled: yes
+ilp_validator_port: 4000
+ilp_validator_host: "{{ ansible_fqdn }}"
+
+#
+# Database
+#
+
+# Configuration of the connection to the database, the user and the Admin
+ilp_validator_db_host: postgres_hostname
+ilp_validator_db_port: 5432
+ilp_validator_db_user: user_ilpv
+ilp_validator_db_name: provider_ilp_validator
+ilp_validator_db_admin_user: postgres
+
+#
+# Remote services
+#
+
+# The *remote* certificates trusted by the ILP Validator, in this example the
+# certificate of the only consumer (the_consumer.com). Certificates of the local
+# Ripple services are trusted automatically.
+ilp_validator_trusted_external_certs:
+ - the_consumer.com-root_ca.crt
+
+# Key pair. This value can be create beforehand manually or it can be created
+# automatically by the role. Manual creation is recommended
+ilp_validator_public_key: '4CBIYRUzAbq5J6nmDp5+bFu9iqVxOmvqVOXXpidZ198='
+
+#
+# Configuration
+#
+
+# Setting this to true will instruct Ansible to take care of configuring all the
+# Ripple Solution components installed on the machine with the configuration of
+# this ILP Validator
+ilp_validator_install_local: true
+
+# Remaining configuration
+ilp_validator_config:
+  log_level: info
+  use_https: "true"
