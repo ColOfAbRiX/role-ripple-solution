@@ -4,6 +4,23 @@
 - name: "Start Ripple Solution"
   service: name=ripple-solution state=started enabled=yes
   register: ripple_solution_start
+  ignore_errors: yes
+
+# Sometimes Systemd gets stuck, so I reset its status and retry
+- block:
+
+   - name: "Stop Ripple Solution"
+     service: name=ripple-solution state=stopped
+     ignore_errors: yes
+
+   - name: "Kill Ripple Solution"
+     command: "{{ ripple_solution_base }}/ripple-solution-service.sh kill"
+
+   - name: "Start Ripple Solution"
+     service: name=ripple-solution state=started enabled=yes
+     register: ripple_solution_start
+
+  when: ripple_solution_start | failed
 
 - name: "Restart Ripple Solution"
   service: name=ripple-solution state=restarted
