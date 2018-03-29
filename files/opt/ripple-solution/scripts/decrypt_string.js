@@ -1,6 +1,3 @@
-// ©Copyright 2016-2017 Ripple Labs Inc., All Rights Reserved.
-// Ripple Labs, Inc. Proprietary and Confidential
-// Unauthorized copying and distribution strictly prohibited
 'use strict'
 const {decryptString} = require('shared')
 
