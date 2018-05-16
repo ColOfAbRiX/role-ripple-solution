@@ -18,9 +18,9 @@
 - name: "Setup Repository"
   yum_repository:
     name:          ripple-private
-    description:   "Ripple Private Repo for Enterprise Linux $releasever - $basearchhttps://clients.ripple.com/repo/rpm/$releasever/$basearch"
+    description:   "Ripple Private Repo for Enterprise Linux $releasever - $basearch"
     baseurl:       https://clients.ripple.com/repo/rpm/$releasever/$basearch
-    enabled:       yes
+    enabled:       "{{ ripple_solution_default_repo_enabled | default(True) | bool }}"
     gpgcheck:      no
     sslclientcert: /var/lib/yum/ripple-private.client.crt
     sslclientkey:  /var/lib/yum/ripple-private.client.key

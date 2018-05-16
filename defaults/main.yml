@@ -74,6 +74,9 @@ ledger_crt_prefix:         "{{ ansible_hostname }}-ledger"
 validator_crt_prefix:      "{{ ansible_hostname }}-validator"
 fx_connector_crt_prefix:   "{{ ansible_hostname }}-fx-connector"
 
+# If set to true it will use the default Ripple repositories
+ripple_solution_default_repo_enabled: true
+
 # Certificates to access the Ripple repository
 ripple_solution_repo_cert_files: []
 # - "{{ ssl_certificates_base }}/ripple_solution/ripple-private.client.crt"
