@@ -22,7 +22,6 @@
 
 # To reset all the databases
 - name: "Cleanup DB"
-  delegate_to: localhost
   include: "03-{{ ripple_solution_db_dialect }}_clean.yml"
   when: ripple_solution_reset_db | default(False) | bool and
         component.cluster_run
@@ -35,7 +34,6 @@
 
 # Pre-steps to configure the chosen RDBMS
 - name: "Pre-Configuration RDBMS"
-  delegate_to: localhost
   include: "04-{{ ripple_solution_db_dialect }}_pre.yml"
   no_log: "{{ ripple_solution_no_log | default(True) | bool }}"
   when: component.enabled | default(False) | bool and
@@ -54,7 +52,6 @@
 
 # Pre-steps to configure the chosen RDBMS
 - name: "Post-Configuration RDBMS"
-  delegate_to: localhost
   include: "06-{{ ripple_solution_db_dialect }}_post.yml"
   no_log: "{{ ripple_solution_no_log | default(True) | bool }}"
   when: component.enabled | default(False) | bool and
